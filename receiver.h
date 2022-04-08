@@ -22,7 +22,7 @@
 
 #define SERVERPORT 9090
 #define SERVERPORTS "9090"
-#define MAXBUFLEN 100
+#define MAXBUFLEN 1034
 
 using namespace std;
 
@@ -35,9 +35,9 @@ class Receiver{
     int getSeen();
     void setSeen();
 
-    int initialReceive();
-    int waitForMessage();
-    int sendAck(int ack);
+    int initialReceive(char buffer[], char ip[], char port[]);
+    //int waitForMessage();
+    int sendAck(int seg, char ip[], char port[]);
 
     void receiveMessage(int argc, char **argv);
 
