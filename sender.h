@@ -28,14 +28,22 @@ class Sender{
 	public:
 		Sender(int size, char *msg);
 	
+		struct sockaddr_in makeSocket(void);
 		void setMessage(int size, char *msg);
+		void updateSent(int newlySent);
+		void updateAck(int newAck);
+		
+		int getSent();
+		int getAck();
+		char* getMessage();
 	
-		int slidingWindow();
-		int initialMessage();
-		void sendMessage(char* buffer, char* sender_ip, char* p);
+		int slidingWindow(char* hostname);
+		char* initialMessage(char* initial);
+		int sendMessage(char* buffer, char* sender_ip, char* p, int send);
 	
 	private:
 		char* message;
+		bool* buffer;
 		int length;
 		int lastSent;
 		int lastAck;
