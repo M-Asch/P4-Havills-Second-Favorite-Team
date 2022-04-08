@@ -9,9 +9,28 @@ using namespace std;
 Receiver::Receiver(){
   lastRecieve = 0;
   lastAcceptable = 0;
+  seen[] = {};
+}
+
+int Receiver::getLastRecieve(){
+	return lastRecieve;
+}
+
+int Receiver::getLastAcceptable(){
+	return lastAcceptable;
+}
+
+int Receiver::getSeen(){
+	return seen;
+}
+
+void Receiver::setSeen(){
+	seen[] = {};
 }
 
 int Receiver::initialReceive(){
+  
+  
   return 0;
 }
 
@@ -21,12 +40,18 @@ int Receiver::waitForMessage(){
 }
 
 
-int Receiver::sendAck(){
+int Receiver::sendAck(int ack){
   return 0;
 }
 
 
 void Receiver::receiveMessage(int argc, char **argv){
+  
+  
+  
+  /*int sockfd;
+  struct addrinfo *temp;
+  
   if (argc < 2)			//checks that the client inputed a connection to join
 	{
 		fprintf(stderr, "client: You must specify the server hostname on the command line.\n");
@@ -198,15 +223,12 @@ void Receiver::receiveMessage(int argc, char **argv){
 						perror("client: sendto");
 						exit(1);
 				}
-			} /*else {
-				printf("Unexpected event occured: %d\n", pfds[0].revents);
-			}*/
+			} 
 		}
 	}
 
 	freeaddrinfo(server_info);
 
- 	close(sockfd);
+ 	close(sockfd);*/
 
-	return 0;
 }

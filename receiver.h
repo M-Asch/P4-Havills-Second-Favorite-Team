@@ -30,14 +30,19 @@ class Receiver{
 
   public:
     Receiver();
+    int getLastRecieve();
+    int getLastAcceptable();
+    int getSeen();
+    void setSeen();
 
     int initialReceive();
     int waitForMessage();
-    int sendAck();
+    int sendAck(int ack);
 
     void receiveMessage(int argc, char **argv);
 
   private:
     int lastRecieve;
     int lastAcceptable;
+    int seen[1024];
 };
