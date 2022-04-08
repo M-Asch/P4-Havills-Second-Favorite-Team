@@ -29,13 +29,20 @@ class Sender{
 		Sender(int size, char *msg);
 	
 		void setMessage(int size, char *msg);
+		void updateSent(int newlySent);
+		void updateAck(int newAck);
+		
+		int getSent();
+		int getAck();
+		char* getMessage();
 	
 		int slidingWindow();
-		int initialMessage();
-		void sendMessage(char* buffer, char* sender_ip, char* p);
+		char* initialMessage(char* initial);
+		int sendMessage(char* buffer, char* sender_ip, char* p, int send);
 	
 	private:
 		char* message;
+		bool* buffer;
 		int length;
 		int lastSent;
 		int lastAck;

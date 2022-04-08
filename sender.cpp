@@ -4,7 +4,9 @@
 using namespace std;
 
 Sender::Sender(int size, char *msg){
+	bool buff[size];
 	message = msg;
+	buffer = buff;
 	length = size;
 	lastSent = 0;
 	lastAck = 0;
@@ -15,15 +17,40 @@ void Sender::setMessage(int size, char *msg){
 	length = size;
 }
 
+void Sender::updateSent(int newlySent){
+	lastSent = newlySent;
+}
+
+void Sender::updateAck(int newAck){
+	lastAck = newAck;
+}
+
+int Sender::getSent(){
+	return lastSent;
+}
+
+int Sender::getAck(){
+	return lastAck;
+}
+
+char* Sender::getMessage(){
+	return message;
+}
+
 int Sender::slidingWindow(){
 	return 0;
 }
 
-int Sender::initialMessage(){
-	return 0;
+char* Sender::initialMessage(char* initial){
+	string init = "00000100";
+	for (int i = 0; i< 8;i++){
+		initial[i] = init[i];
+	}
+	return initial;
 }
 
-void Sender::sendMessage(char* buffer, char* sender_ip, char* p){
+int Sender::sendMessage(char* buffer, char* sender_ip, char* p, int send){
+
 
 	struct addrinfo hints, *server_info;
 
@@ -52,15 +79,27 @@ void Sender::sendMessage(char* buffer, char* sender_ip, char* p){
  		exit(2);
  	}
 
+
+	if (send == 0)
+ 		return(newSock);	
+	
  	int numbytes = sendto(newSock, buffer, MAXBUFLEN, 0, ptr->ai_addr, ptr->ai_addrlen);		//send out last message
  	if ((numbytes) == -1)
  	{
  		perror("client: sendto");
  		exit(1);
  	}
+ return 0;
 }
 
 int main (void){
 
+	int size = 10;
+	char m[10] = "abcdehikd";
+	Sender msg(size, m);
+	msg.updateSent(52);
+	
+	char initialM[8];
+	msg.initialMessage(initialM);
 	return 0;
 }
