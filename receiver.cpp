@@ -9,7 +9,7 @@ using namespace std;
 Receiver::Receiver(){
   lastRecieve = 0;
   lastAcceptable = 0;
-  seen[] = {};
+  seen = new int[1024];
 }
 
 int Receiver::getLastRecieve(){
@@ -20,7 +20,7 @@ int Receiver::getLastAcceptable(){
 	return lastAcceptable;
 }
 
-int Receiver::getSeen(){
+int* Receiver::getSeen(){
 	return seen;
 }
 
@@ -29,10 +29,20 @@ void Receiver::setSeen(){
 }
 
 int Receiver::initialReceive(char buffer[], char ip[], char port[]){
-  
-	
-  
-  
+
+    unsigned long seq = ((buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3]);
+    unsigned short ack = (buffer[4]);
+    unsigned short control = (buffer[5]);
+    unsigned short length = (buffer[6] << 8 | buffer[7]);
+
+
+    if(control == 1 && ack == 0 && length == 0){
+      sendAck(seq, ip, port);
+    }
+    else{
+      return -1;
+    }
+
   	return 0;
 }
 
@@ -42,7 +52,7 @@ int Receiver::initialReceive(char buffer[], char ip[], char port[]){
 // }
 
 
-int Receiver::sendAck(int seg, char ip[], char port[]){
+int Receiver::sendAck(unsigned long seg, char ip[], char port[]){
   return 0;
 }
 
@@ -51,7 +61,7 @@ void Receiver::receiveMessage(){
   	char ip[16];
 	char port[6];
 	int LISTENING = 1;
-	  
+
 	//Prepare to recieve message
 	char buffer[MAXBUFLEN];                   // buffer to hold received message
 	struct sockaddr_storage sender_addr;      // sender's address (may be IPv6)
@@ -81,16 +91,22 @@ void Receiver::receiveMessage(){
 	memcpy(ip, sender_ip_string);			//save ip
 	memcpy(port, p);		//and port string
 
-
-	if(initialReceive(buffer, ip, port) == -1){
-		perror("initialRecieve");
-		exit(1);
-	}
-
+  int initial = 1;
 
 	while (LISTENING == 1){
-		
+      while (initial == 1){
+        if(initialReceive(buffer, ip, port) != -1){
+           initial = 0;
+        }
+      }
 	}
-  
+}
 
+
+int main(){
+
+  recieveMessage();
+
+
+  return 0;
 }
