@@ -13,7 +13,7 @@
 #include <poll.h>
 
 //===========================
-//		  Definitions 
+//		  Definitions
 //
 //===========================
 
@@ -27,23 +27,24 @@ class Sender{
 
 	public:
 		Sender(int size, char *msg);
-	
+
 		struct sockaddr_in makeSocket(void);
 		void setMessage(int size, char *msg);
 		void updateSent(int newlySent);
 		void updateAck(int newAck);
-		
+
 		int getSent();
 		int getAck();
 		char* getMessage();
-	
+
 		int slidingWindow(char* hostname);
 		char* initialMessage(char* initial);
+		char* makeMessage(char* message, char* messageToSend, int message_length, int seq);
 		int sendMessage(char* buffer, char* sender_ip, char* p, int send);
-	
+
 	private:
 		char* message;
-		bool* buffer;
+		//char* buffer[1024];
 		int length;
 		int lastSent;
 		int lastAck;

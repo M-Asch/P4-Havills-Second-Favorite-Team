@@ -4,9 +4,8 @@
 using namespace std;
 
 Sender::Sender(int size, char *msg){
-	bool buff[size];
 	message = msg;
-	buffer = buff;
+	//buffer = new char* [(size/1024) + 1][1024];
 	length = size;
 	lastSent = 0;
 	lastAck = 0;
@@ -84,8 +83,8 @@ int Sender::slidingWindow(char* hostname){
  		fprintf(stderr, "client: failed to create socket\n");
  		exit(2);
  	}
- 	
- 	
+
+
  	//=============================
  	//Bind sender port
  	//=============================
@@ -101,20 +100,61 @@ int Sender::slidingWindow(char* hostname){
 		perror("client: bind failed");
 		exit(1);
 	}
-	
+
 	//send initial ack message to reciever
 	char initM[8];
 	memset(initM, 0, 8);
 	initialMessage(initM);
-	
+
 	int numbytes = sendto(sockfd, initM, sizeof(initM), 0, ptr->ai_addr, ptr->ai_addrlen);
  	if ((numbytes) == -1)
  	{
  		perror("client: sendto");
  		exit(1);
  	}
- 	
- 	//
+
+	//seperate message into sizes and begin seqnum (turn this into a seperate function)
+	unsigned long seq = 0;
+	unsigned char ack = 0x01;
+	unsigned char control = 0x00;
+
+	int remaining_length = length;		//keep track of all the lengths needed
+	int message_length = 0;
+	int starting = 0;
+
+	char buffer[length/1024 + 1][1024];
+
+	for (int i = 0; i < (length/1024 + 1); i++){				//find out how much to write to the length
+		memset(buffer[i],0,1024);				//make sure its 0d out
+		if (remaining_length > 1024){
+			remaining_length = remaining_length - 1024;
+			message_length = 1024;
+		}
+		else{
+			message_length = length;
+			remaining_length = 0;
+		}
+		buffer[i][0] = (seq >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
+		buffer[i][1] = (seq >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
+		buffer[i][2] = (seq >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
+		buffer[i][3] = seq & 0xff;		//00000000 00000000 00000000 (00000000)
+
+		buffer[i][4] = ack &0xff; //00000000(00000001) this is the ACK
+		buffer[i][5] = control &0xff; //00000000 (00000001) this is the CONTROL
+
+		buffer[i][6] = (message_length >> 8) & 0xff;
+		buffer[i][7] = message_length & 0xff;
+
+		for (int x = 0; x < message_length; x++){		//copy message into the string
+			buffer[i][8 + x] = message[starting + x];
+		}
+		starting = starting + message_length;
+	}
+
+	//char messageToSend[message_length];
+	//makeMessage(message, messageToSend, message_length, int seq);
+
+ 	//prep to begin polling
  	struct pollfd pfds[2];
 
 	while (LISTENING)
@@ -129,26 +169,29 @@ int Sender::slidingWindow(char* hostname){
 
 		pfds[1].fd = 0; //cin
 		pfds[1].events = POLLIN;
-		
+
 		int num_events = poll(pfds, 2, -1);
-		
+
 		if (num_events != 0) {
 			//printf("Type message: "); //Prompts client to enter message to send to chat partner
 			int pollin_happened1 = pfds[0].revents & POLLIN;
-			
+
 			if (pollin_happened1){
 				//Stage 3: check ack
 				char recieve[8];
 				memset(recieve, 0 , 8);
-        		int numbytes = recvfrom(sockfd, recieve, 8, 0, (struct sockaddr *)&sender_addr, &addr1_len);
-		    	if (numbytes == -1)
-		    	{
-			     		perror("recvfrom");
-			     		exit(1);
-		   		}
+      	int numbytes = recvfrom(sockfd, recieve, 8, 0, (struct sockaddr *)&sender_addr, &addr1_len);
+	    	if (numbytes == -1)
+	    	{
+		     		perror("recvfrom");
+		     		exit(1);
+	   		}
 
-				recieve[numbytes] = '\0';
-				printf("reciever: \"%s\"\n", recieve);
+				//FIGURE OUT HOW TO RECIEVE STUFF AND CHECK THE ACK
+
+
+			recieve[numbytes] = '\0';
+			printf("reciever: \"%s\"\n", recieve);
 			}
 		}
 	}
@@ -157,12 +200,36 @@ int Sender::slidingWindow(char* hostname){
 }
 
 char* Sender::initialMessage(char* initial){
-	string init = "00000100";
-	for (int i = 0; i< 8;i++){
-		initial[i] = init[i];
-	}
+	unsigned long seqnum = 300;
+	unsigned short control = 1;
+	unsigned short length = 0;
+
+	initial[0] = (seqnum >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
+	initial[1] = (seqnum >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
+	initial[2] = (seqnum >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
+	initial[3] = seqnum & 0xff;		//00000000 00000000 00000000 (00000000)
+
+	initial[4] = (control >> 8) &0xff; //(00000000) 00000001 this is the ACK
+	initial[5] = control &0xff; //00000000 (00000001) this is the CONTROL
+
+	initial[6] = length & 0xff;
+	initial[7] = (length >> 8) & 0xff;
+
 	return initial;
 }
+
+char* Sender::makeMessage(char* message, char* messageToSend, int message_length, int seq){
+
+
+	unsigned short control = 1;
+	unsigned short length = 0;
+
+	for (int i = 0; i < message_length; i++){
+
+	}
+	return messageToSend;
+}
+
 
 int Sender::sendMessage(char* buffer, char* sender_ip, char* p, int send){
 	return 0;
@@ -171,10 +238,10 @@ int Sender::sendMessage(char* buffer, char* sender_ip, char* p, int send){
 int main (void){
 
 	int size = 20;
-	char m[20] = "red7.cs.denison.edu";
+	char m[20] = "red1.cs.denison.edu";
 	Sender msg(size, m);
 	msg.updateSent(52);
-	
+
 	msg.slidingWindow(m);
 	return 0;
 }
