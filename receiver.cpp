@@ -25,7 +25,7 @@ int* Receiver::getSeen(){
 }
 
 void Receiver::setSeen(){
-	seen[] = {};
+	seen = {};
 }
 
 int Receiver::initialReceive(char buffer[], char ip[], char port[]){
@@ -57,9 +57,9 @@ int Receiver::sendAck(unsigned long seg, char ip[], char port[]){
 }
 
 
-void Receiver::receiveMessage(){
+void Receiver::receiveMessage(int sockfd){
   	char ip[16];
-	char port[6];
+	char portC[6];
 	int LISTENING = 1;
 
 	//Prepare to recieve message
@@ -88,14 +88,14 @@ void Receiver::receiveMessage(){
 	buffer[numbytes] = '\0'; // add null terminator for printing (finalize message)
 
 	//check to see if clients need to be updated, fill in client information
-	memcpy(ip, sender_ip_string);			//save ip
-	memcpy(port, p);		//and port string
+	memcpy(ip, sender_ip_string, sizeof(sender_ip_string));			//save ip
+	memcpy(portC, p, sizeof(p));		//and port string
 
-  int initial = 1;
+    int initial = 1;
 
 	while (LISTENING == 1){
       while (initial == 1){
-        if(initialReceive(buffer, ip, port) != -1){
+        if(initialReceive(buffer, ip, portC) != -1){
            initial = 0;
         }
       }
@@ -103,9 +103,57 @@ void Receiver::receiveMessage(){
 }
 
 
-int main(){
+int main(int argc, char **argv){
 
-  recieveMessage();
+  	int sockfd;
+  	struct addrinfo *temp;
+
+	struct addrinfo hints, *server_info;   	//Sets up socket for client to send messages
+
+	memset(&hints, 0, sizeof hints);
+ 	hints.ai_family = AF_INET; //IPv4
+ 	hints.ai_socktype = SOCK_DGRAM; // UDP socket
+
+	int status = getaddrinfo(argv[1], SERVERPORTS, &hints, &server_info);
+ 	if (status != 0)
+ 	{
+ 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
+ 		exit(1);
+ 	}
+
+	//int sockfd;
+ 	struct addrinfo *ptr = server_info; //ptr to current struct addrinfo
+ 	while (ptr != NULL)
+ 	{
+ 		sockfd = socket(ptr->ai_family, ptr->ai_socktype, 0);
+ 		if (sockfd != -1)
+ 		{
+ 			break;
+ 		}
+ 		ptr = ptr->ai_next;
+ 	}
+
+ 	if (ptr == NULL)
+ 	{
+ 		fprintf(stderr, "client: failed to create socket\n");
+ 		exit(2);
+ 	}
+
+	temp = ptr;					//taking the addr information, and inserting it into the global variables
+  	temp->ai_addr = ptr->ai_addr;
+  	temp->ai_addrlen = ptr->ai_addrlen;
+
+	//Sets up socket for client for recieving message
+  	struct sockaddr_in my_addr;
+  	my_addr.sin_family = AF_INET;
+  	my_addr.sin_port = htons(SERVERPORT); //SERVERPORTS
+  	my_addr.sin_addr.s_addr = INADDR_ANY;
+  	memset(my_addr.sin_zero, 0, sizeof my_addr.sin_zero);
+
+
+	// ALL THE RECEIVING AND CHECKING IS HANDLED THROUGH THIS FUNCTION
+ 	Receiver r;
+	r.receiveMessage(sockfd);
 
 
   return 0;
