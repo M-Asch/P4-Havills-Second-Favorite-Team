@@ -231,8 +231,8 @@ char* Sender::initialMessage(char* initial){
 	initial[4] = (control >> 8) &0xff; //(00000000) 00000001 this is the ACK
 	initial[5] = control &0xff; //00000000 (00000001) this is the CONTROL
 
-	initial[6] = length & 0xff;
-	initial[7] = (length >> 8) & 0xff;
+	initial[6] = (length >> 8) & 0xff;
+	initial[7] = length & 0xff;
 
 	return initial;
 }
