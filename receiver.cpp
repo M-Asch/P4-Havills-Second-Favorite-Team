@@ -28,7 +28,7 @@ void Receiver::setSeen(){
 	seen = {};
 }
 
-int Receiver::initialReceive(char buffer[], char ip[], char port[]){
+int Receiver::initialReceive(char buffer[], int sockfd, struct addrinfo *ptr){
 
     unsigned long seq = ((buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3]);
     unsigned short ack = (buffer[4]);
@@ -37,7 +37,7 @@ int Receiver::initialReceive(char buffer[], char ip[], char port[]){
 
 
     if(control == 1 && ack == 0 && length == 0){
-      sendAck(seq, ip, port);
+      sendAck(seq, sockfd, ptr);
     }
     else{
       return -1;
@@ -47,8 +47,8 @@ int Receiver::initialReceive(char buffer[], char ip[], char port[]){
 }
 
 
-
-int Receiver::sendAck(unsigned long seq, char* ip, char* port){
+// char* ip, char* port
+int Receiver::sendAck(unsigned long seq, int sockfd, struct addrinfo *ptr){
   char buffer[8];
   memset(buffer, 0, 8);
 
@@ -70,14 +70,18 @@ int Receiver::sendAck(unsigned long seq, char* ip, char* port){
 	buffer[6] = (length >> 8) & 0xff;
 	buffer[7] = length & 0xff;
 
-
+  int numbytes = sendto(sockfd, buffer, sizeof(buffer), 0, ptr->ai_addr, ptr->ai_addrlen);
+ 	if ((numbytes) == -1)
+ 	{
+ 		return -1; // shows error occured in the sendto
+ 	}
 
   return 0;
 }
 
 
-void Receiver::receiveMessage(int sockfd){
-  	char ip[16];
+void Receiver::receiveMessage(int sockfd, struct addrinfo *ptr){
+  char ip[16];
 	char portC[6];
 	int LISTENING = 1;
 
@@ -110,22 +114,21 @@ void Receiver::receiveMessage(int sockfd){
 	memcpy(ip, sender_ip_string, sizeof(sender_ip_string));			//save ip
 	memcpy(portC, p, sizeof(p));		//and port string
 
-  int initial = 1;
+  if(initialReceive(buffer, sockfd, ptr) == -1){
+    perror("initialReceive");
+    exit(1);
+  }
 
 	while (LISTENING == 1){
-      while (initial == 1){
-        if(initialReceive(buffer, ip, portC) != -1){
-           initial = 0;
-        }
-      }
+
 	}
 }
 
 
 int main(int argc, char **argv){
 
-  	int sockfd;
-  	struct addrinfo *temp;
+  int sockfd;
+  struct addrinfo *temp;
 
 	struct addrinfo hints, *server_info;   	//Sets up socket for client to send messages
 
@@ -172,7 +175,7 @@ int main(int argc, char **argv){
 
 	// ALL THE RECEIVING AND CHECKING IS HANDLED THROUGH THIS FUNCTION
  	Receiver r;
-	r.receiveMessage(sockfd);
+	r.receiveMessage(sockfd, ptr);
 
 
   return 0;
