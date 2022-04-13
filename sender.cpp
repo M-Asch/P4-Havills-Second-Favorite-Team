@@ -5,7 +5,7 @@ using namespace std;
 
 Sender::Sender(int size, char *msg){
 	message = msg;
-	//buffer = new char* [(size/1024) + 1][1024];
+	tracking = new bool [size/MAXDATALENGTH + 1];
 	length = size;
 	lastSent = 0;
 	lastAck = 0;
@@ -47,7 +47,6 @@ char* Sender::getMessage(){
 }
 
 int Sender::slidingWindow(char* hostname){
-
 	int LISTENING = 1;
 
 	//=============================
@@ -100,8 +99,9 @@ int Sender::slidingWindow(char* hostname){
 		perror("client: bind failed");
 		exit(1);
 	}
-
+	//=============================
 	//send initial ack message to reciever
+	//=============================
 	char initM[8];
 	memset(initM, 0, 8);
 	initialMessage(initM);
@@ -113,22 +113,27 @@ int Sender::slidingWindow(char* hostname){
  		exit(1);
  	}
 
-	//seperate message into sizes and begin seqnum (turn this into a seperate function)
-	unsigned long seq = 0;
-	unsigned char ack = 0x01;
-	unsigned char control = 0x00;
+	//=============================
+	//seperate message into sizes and begin seqnum
+	//=============================
+	int sent = 0;		//track current number of messages sent to see when we are done sending
+	int messageCount = length/MAXDATALENGTH + 1; //number of messages required to send all of data
+
+	unsigned long seq = 1;			//sequence number
+	unsigned char ack = 0x00;		//acknoweldgement
+	unsigned char control = 0x00;	//control value
 
 	int remaining_length = length;		//keep track of all the lengths needed
 	int message_length = 0;
 	int starting = 0;
 
-	char buffer[length/1024 + 1][1024];
+	char buffer[messageCount][MAXDATALENGTH];
 
-	for (int i = 0; i < (length/1024 + 1); i++){				//find out how much to write to the length
-		memset(buffer[i],0,1024);				//make sure its 0d out
-		if (remaining_length > 1024){
-			remaining_length = remaining_length - 1024;
-			message_length = 1024;
+	for (int i = 0; i < (messageCount); i++){				//find out how much to write to the length
+		memset(buffer[i],0,MAXDATALENGTH);				//make sure its 0d out
+		if (remaining_length > MAXDATALENGTH){
+			remaining_length = remaining_length - MAXDATALENGTH;
+			message_length = MAXDATALENGTH;
 		}
 		else{
 			message_length = length;
@@ -151,13 +156,22 @@ int Sender::slidingWindow(char* hostname){
 		starting = starting + message_length;
 	}
 
-	//char messageToSend[message_length];
-	//makeMessage(message, messageToSend, message_length, int seq);
+	//check message
+	/*for (int i = 0; i < 27; i++){
+		printf("%c \n", buffer[0][i]);
+	}*/
 
- 	//prep to begin polling
+	//=============================
+ 	//Begin listening for incoming messages for a set amount of time
+	//=============================
  	struct pollfd pfds[2];
 
-	while (LISTENING)
+	unsigned long recievedseq;
+	unsigned short recievedack;
+	unsigned short recievedcontrol;
+	unsigned short recievedlength;
+
+	while (sent < messageCount)
 	{
 		char buffer[8]; //buffer to hold recieved message
 		memset(buffer, 0, 1034);
@@ -170,7 +184,7 @@ int Sender::slidingWindow(char* hostname){
 		pfds[1].fd = 0; //cin
 		pfds[1].events = POLLIN;
 
-		int num_events = poll(pfds, 2, -1);
+		int num_events = poll(pfds, 2, 100);
 
 		if (num_events != 0) {
 			//printf("Type message: "); //Prompts client to enter message to send to chat partner
@@ -187,7 +201,12 @@ int Sender::slidingWindow(char* hostname){
 		     		exit(1);
 	   		}
 
-				//FIGURE OUT HOW TO RECIEVE STUFF AND CHECK THE ACK
+				recievedseq = ((recieve[0] << 24) | (recieve[1] << 16) | (recieve[2] << 8) | recieve[3]);
+				recievedack = (0 << 8) | recieve[4];
+				recievedcontrol = (0 << 8) | recieve[5];
+				recievedlength = (recieve[6] << 8) | recieve[7];
+
+				//if (recivedAck == 1 && recievedcontrol)
 
 
 			recieve[numbytes] = '\0';
@@ -200,7 +219,7 @@ int Sender::slidingWindow(char* hostname){
 }
 
 char* Sender::initialMessage(char* initial){
-	unsigned long seqnum = 300;
+	unsigned long seqnum = 0;
 	unsigned short control = 1;
 	unsigned short length = 0;
 
@@ -218,18 +237,6 @@ char* Sender::initialMessage(char* initial){
 	return initial;
 }
 
-char* Sender::makeMessage(char* message, char* messageToSend, int message_length, int seq){
-
-
-	unsigned short control = 1;
-	unsigned short length = 0;
-
-	for (int i = 0; i < message_length; i++){
-
-	}
-	return messageToSend;
-}
-
 
 int Sender::sendMessage(char* buffer, char* sender_ip, char* p, int send){
 	return 0;
@@ -238,7 +245,7 @@ int Sender::sendMessage(char* buffer, char* sender_ip, char* p, int send){
 int main (void){
 
 	int size = 20;
-	char m[20] = "red1.cs.denison.edu";
+	char m[20] = "red3.cs.denison.edu";
 	Sender msg(size, m);
 	msg.updateSent(52);
 
