@@ -106,13 +106,6 @@ int Sender::slidingWindow(char* hostname){
 	memset(initM, 0, 8);
 	initialMessage(initM);
 
-	int numbytes = sendto(sockfd, initM, sizeof(initM), 0, ptr->ai_addr, ptr->ai_addrlen);
- 	if ((numbytes) == -1)
- 	{
- 		perror("client: sendto");
- 		exit(1);
- 	}
-
 	//=============================
 	//seperate message into sizes and begin seqnum
 	//=============================
@@ -166,15 +159,27 @@ int Sender::slidingWindow(char* hostname){
 	//=============================
  	struct pollfd pfds[2];
 
-	unsigned long recievedseq;
-	unsigned short recievedack;
-	unsigned short recievedcontrol;
-	unsigned short recievedlength;
+	unsigned long recievedseq;		//get the acks seq num
+	unsigned short recievedack;		//get the acks ack value
+	unsigned short recievedcontrol;	//get the acks control value
+	unsigned short recievedlength;	//get the length of ack
+
+	int initialrecieved = 0;
+
+	//=============================
+ 	//sEND initialMessage and begin polling
+	//=============================
+	int numbytes = sendto(sockfd, initM, sizeof(initM), 0, ptr->ai_addr, ptr->ai_addrlen);
+ 	if ((numbytes) == -1)
+ 	{
+ 		perror("client: sendto");
+ 		exit(1);
+ 	}
 
 	while (sent < messageCount)
 	{
 		char buffer[8]; //buffer to hold recieved message
-		memset(buffer, 0, 1034);
+		memset(buffer, 0, 8);
  		struct sockaddr_storage sender_addr;      // sender's address (may be IPv6)
 		socklen_t addr1_len = sizeof sender_addr;  // length of this address
 
@@ -201,18 +206,42 @@ int Sender::slidingWindow(char* hostname){
 		     		exit(1);
 	   		}
 
+				//get the information from the ack message
 				recievedseq = ((recieve[0] << 24) | (recieve[1] << 16) | (recieve[2] << 8) | recieve[3]);
 				recievedack = (0 << 8) | recieve[4];
 				recievedcontrol = (0 << 8) | recieve[5];
 				recievedlength = (recieve[6] << 8) | recieve[7];
 
-				//if (recivedAck == 1 && recievedcontrol)
-
-
+				//check to see if it was the initial message or a later one
+				if (initialrecieved == 0){
+					lastAck = 0;
+					lastSent = 0;
+				}
+				else if (recievedack == 1 && recievedcontrol == 1){
+					tracking[recievedseq] = true;
+				}
 			recieve[numbytes] = '\0';
 			printf("reciever: \"%s\"\n", recieve);
 			}
 		}
+		//send out the messages that need to be resent or sent for the first time
+		int framesOut = 0;
+		for (int i = lastAck; i < lastSent; i++){
+			if (tracking[i] == false){		//check to see if the frame between the lastAck and lastSent have been acked
+				/*int numbytes = sendto(sockfd, buffer[i], sizeof(buffer[i]), 0, ptr->ai_addr, ptr->ai_addrlen); //if not resend the message
+			 	if ((numbytes) == -1)
+			 	{
+			 		perror("client: sendto");
+			 		exit(1);
+			 	}*/
+				framesOut += 1;		//update frames out so we know we cannot move on
+			}
+		else if (tracking[i] == true){
+			if (i - 1 == lastAck)
+				lastAck = i;
+			}
+		}
+		printf("hello \n");
 	}
 
 	return 0;
@@ -245,7 +274,7 @@ int Sender::sendMessage(char* buffer, char* sender_ip, char* p, int send){
 int main (void){
 
 	int size = 20;
-	char m[20] = "red3.cs.denison.edu";
+	char m[20] = "red2.cs.denison.edu";
 	Sender msg(size, m);
 	msg.updateSent(52);
 
