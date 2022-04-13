@@ -32,17 +32,17 @@ class Receiver{
     Receiver();
     int getLastRecieve();
     int getLastAcceptable();
-    int getSeen();
+    int* getSeen();
     void setSeen();
 
     int initialReceive(char buffer[], char ip[], char port[]);
     //int waitForMessage();
     int sendAck(unsigned long seg, char ip[], char port[]);
 
-    void receiveMessage(int argc, char **argv);
+    void receiveMessage(int sockfd); //int argc, char **argv
 
   private:
     int lastRecieve;
     int lastAcceptable;
-    int seen[1024];
+    int* seen;
 };
