@@ -52,7 +52,27 @@ int Receiver::initialReceive(char buffer[], char ip[], char port[]){
 // }
 
 
-int Receiver::sendAck(unsigned long seg, char ip[], char port[]){
+int Receiver::sendAck(unsigned long seq, char* ip, char* port){
+  unsigned long seqnum = 300;
+	unsigned short control = 0;
+  if (seq == 0){
+    control = 1;
+  }
+	unsigned short length = 0;
+
+	initial[0] = (seqnum >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
+	initial[1] = (seqnum >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
+	initial[2] = (seqnum >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
+	initial[3] = seqnum & 0xff;		//00000000 00000000 00000000 (00000000)
+
+	initial[4] = (control >> 8) &0xff; //(00000000) 00000001 this is the ACK
+	initial[5] = control &0xff; //00000000 (00000001) this is the CONTROL
+
+	initial[6] = (length >> 8) & 0xff;
+	initial[7] = length & 0xff;
+
+	return initial;
+
   return 0;
 }
 
@@ -86,12 +106,12 @@ void Receiver::receiveMessage(int sockfd){
 	sprintf(p, "%d", port);					//turn port into string
 
 	buffer[numbytes] = '\0'; // add null terminator for printing (finalize message)
-
+  printf("balls\n");
 	//check to see if clients need to be updated, fill in client information
 	memcpy(ip, sender_ip_string, sizeof(sender_ip_string));			//save ip
 	memcpy(portC, p, sizeof(p));		//and port string
 
-    int initial = 1;
+  int initial = 1;
 
 	while (LISTENING == 1){
       while (initial == 1){

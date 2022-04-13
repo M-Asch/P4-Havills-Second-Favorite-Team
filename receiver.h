@@ -37,7 +37,7 @@ class Receiver{
 
     int initialReceive(char buffer[], char ip[], char port[]);
     //int waitForMessage();
-    int sendAck(unsigned long seg, char ip[], char port[]);
+    int sendAck(unsigned long seq, char ip[], char port[]);
 
     void receiveMessage(int sockfd); //int argc, char **argv
 
