@@ -47,31 +47,30 @@ int Receiver::initialReceive(char buffer[], char ip[], char port[]){
 }
 
 
-// int Receiver::waitForMessage(){
-//   return 0;
-// }
-
 
 int Receiver::sendAck(unsigned long seq, char* ip, char* port){
-  unsigned long seqnum = 300;
-	unsigned short control = 0;
+  char buffer[8];
+  memset(buffer, 0, 8);
+
+	unsigned char control = 0x00;
   if (seq == 0){
-    control = 1;
+    control = 0x01;
   }
+  unsigned char ack = 0x01;
 	unsigned short length = 0;
 
-	initial[0] = (seqnum >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
-	initial[1] = (seqnum >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
-	initial[2] = (seqnum >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
-	initial[3] = seqnum & 0xff;		//00000000 00000000 00000000 (00000000)
+	buffer[0] = (seq >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
+	buffer[1] = (seq >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
+	buffer[2] = (seq >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
+	buffer[3] = seq & 0xff;		//00000000 00000000 00000000 (00000000)
 
-	initial[4] = (control >> 8) &0xff; //(00000000) 00000001 this is the ACK
-	initial[5] = control &0xff; //00000000 (00000001) this is the CONTROL
+	buffer[4] = ack &0xff; //(00000000) 00000001 this is the ACK
+	buffer[5] = control &0xff; //00000000 (00000001) this is the CONTROL
 
-	initial[6] = (length >> 8) & 0xff;
-	initial[7] = length & 0xff;
+	buffer[6] = (length >> 8) & 0xff;
+	buffer[7] = length & 0xff;
 
-	return initial;
+
 
   return 0;
 }
