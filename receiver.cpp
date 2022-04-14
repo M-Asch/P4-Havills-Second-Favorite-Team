@@ -23,6 +23,39 @@ Receiver::Receiver(int s, char* c){
   message = c;
 }
 
+//==========================================
+//               getSeq
+//           returns seqnum
+//==========================================
+int Receiver::getSeq(){
+  return seqnum;
+}
+
+//==========================================
+//               getMessage
+//           returns message
+//==========================================
+char* Receiver::getMessage(){
+  return message;
+}
+
+
+//==========================================
+//               setSeq
+//        sets seqnum to inputed value
+//==========================================
+void Receiver::setSeq(int s){
+  seqnum = s;
+}
+
+//==========================================
+//              setMessage
+//    sets message as inputed char array
+//==========================================
+void Receiver::setMessage(char* message){
+  message = m;
+}
+
 //====================================================
 //               initialReceive
 //      Handles the process for the connection setup

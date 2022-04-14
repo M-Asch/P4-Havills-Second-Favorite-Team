@@ -30,20 +30,17 @@ class Receiver{
 
   public:
     Receiver();
-    int getLastRecieve();
-    int getLastAcceptable();
-    int* getSeen();
-    void setSeen(int* saw);
+    Receiver(int s, char* c);
+    int getSeq();
+    char* getMessage();
+    void setSeq(int s);
+    void setMessage(char* m);
 
     int initialReceive(char buffer[], int sockfd, struct addrinfo *ptr); //char ip[], char port[]
     int sendAck(unsigned long seq, int sockfd, struct addrinfo *ptr); //char ip[], char port[]
     void receiveMessage(int sockfd, struct addrinfo *ptr); //int argc, char **argv
 
   private:
-    int lastRecieve;
-    int lastAcceptable;
-    int* seen;
-
     int seqnum;
-    char* message
+    char* message;
 };
