@@ -52,7 +52,7 @@ void Receiver::setSeq(int s){
 //              setMessage
 //    sets message as inputed char array
 //==========================================
-void Receiver::setMessage(char* message){
+void Receiver::setMessage(char* m){
   message = m;
 }
 
@@ -162,6 +162,11 @@ void Receiver::receiveMessage(int sockfd, struct addrinfo *ptr){
     exit(1);
   }
 
+  // sets up list to store received data
+  Receiver received[MAXBUFLEN] = {};
+  int seen[MAXBUFLEN] = {};
+  int count = 0;
+
   struct pollfd pfds[1];
 
 	while (LISTENING == 1){
@@ -197,6 +202,15 @@ void Receiver::receiveMessage(int sockfd, struct addrinfo *ptr){
           char data[length];
           for (int i = 0; i < length; i++){
              data[i + 8] = receive[i + 8];
+          }
+
+          // checks to see if seqnum had been seen yet
+          bool temp = (std::find(std::begin(seen), std::end(seen), seq) != std::end(seen));
+          if (temp == false){
+             seen[count] = seq;
+             Receiver add(seq, data);
+             received[count] = add;
+             count++;
           }
 
           if(control == 0 && ack == 0){
