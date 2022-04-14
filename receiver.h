@@ -43,4 +43,7 @@ class Receiver{
     int lastRecieve;
     int lastAcceptable;
     int* seen;
+
+    int seqnum;
+    char* message
 };

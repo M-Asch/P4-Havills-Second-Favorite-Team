@@ -10,41 +10,17 @@ using namespace std;
 //         Initializes a Receiver
 //==========================================
 Receiver::Receiver(){
-  lastRecieve = 0;
-  lastAcceptable = 0;
-  seen = new int[MAXBUFLEN];
+  seqnum = 0;
+  message = new char[1024];
 }
 
-//===============================================
-//               getLastRecieve
-//       returns value stored in lastRecieve
-//===============================================
-int Receiver::getLastRecieve(){
-	return lastRecieve;
-}
-
-//===============================================
-//               getLastAcceptable
-//      returns value stored in lastAcceptable
-//===============================================
-int Receiver::getLastAcceptable(){
-	return lastAcceptable;
-}
-
-//===============================================
-//               getSeen
-//      returns values stored in seen
-//===============================================
-int* Receiver::getSeen(){
-	return seen;
-}
-
-//===============================================
-//               setSeen
-//     sets seen to be equal to inputed array
-//===============================================
-void Receiver::setSeen(int* saw){
-	seen = saw;
+//==========================================
+//               Receiver
+//  Initializes a Receiver with inputed values
+//==========================================
+Receiver::Receiver(int s, char* c){
+  seqnum = s;
+  message = c;
 }
 
 //====================================================
