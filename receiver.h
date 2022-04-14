@@ -41,6 +41,9 @@ class Receiver{
     int sendAck(unsigned long seq, int sockfd, struct addrinfo *ptr); //char ip[], char port[]
     void receiveMessage(int sockfd, struct addrinfo *ptr); //int argc, char **argv
 
+    void quickSort(Receiver arr[], int start, int end);
+    int partition(Receiver arr[], int start, int end);
+
   private:
     int seqnum;
     char* message;

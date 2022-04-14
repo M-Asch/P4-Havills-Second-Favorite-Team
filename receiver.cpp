@@ -119,6 +119,55 @@ int Receiver::sendAck(unsigned long seq, int sockfd, struct addrinfo *ptr){
   return 0;
 }
 
+//====================================================
+//               quickSort
+//      Sorts an array from least to greatest
+//====================================================
+void Receiver::quickSort(Receiver arr[], int start, int end){
+  if (start >= end){
+    return;
+  }
+
+  int p = partition(arr, start, end);
+
+  //Sort left side
+  quickSort(arr, start, p-1);
+  //Sort right side
+  quickSort(arr, p+1, end);
+}
+
+//====================================================
+//               partition
+//      partition of array for quickSort
+//====================================================
+int Receiver::partition(Receiver arr[], int start, int end){
+  int pivot = arr[start].getSeq();
+
+  int count = 0;
+  for (int i = start + 1; i <= end; i++){
+    if (arr[i].getSeq() <= pivot){
+      count++;
+    }
+  }
+
+  int pivotIndex = start + count;
+  swap(arr[pivotIndex], arr[start]);
+
+  int i = start, j = end;
+  while (i < pivotIndex && j > pivotIndex){
+    while (arr[i].getSeq() <= pivot){
+      i++;
+    }
+    while (arr[j].getSeq() > pivot){
+      j--;
+    }
+    if (i < pivotIndex && j > pivotIndex){
+      swap(arr[i++], arr[j--]);
+    }
+  }
+
+  return pivotIndex;
+}
 
 //=================================================================================
 //               receiveMessage
@@ -219,6 +268,10 @@ void Receiver::receiveMessage(int sockfd, struct addrinfo *ptr){
 	    }
     }
   }
+
+
+  // rebuild message here
+
 }
 
 //===============================================
@@ -277,6 +330,8 @@ int main(int argc, char **argv){
  	Receiver r;
 	r.receiveMessage(sockfd, ptr);
 
+  freeaddrinfo(server_info);
+ 	close(sockfd);
 
   return 0;
 }
