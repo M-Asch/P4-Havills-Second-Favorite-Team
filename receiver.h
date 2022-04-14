@@ -31,10 +31,12 @@ class Receiver{
 
   public:
     Receiver();
-    Receiver(int s, char* c);
+    Receiver(int s, int l, char* c);
     int getSeq();
+    int getLen();
     char* getMessage();
     void setSeq(int s);
+    void setLen(int l);
     void setMessage(char* m);
 
     int initialReceive(char buffer[], int sockfd, struct addrinfo *ptr); //char ip[], char port[]
@@ -46,5 +48,6 @@ class Receiver{
 
   private:
     int seqnum;
+    int len;
     char* message;
 };

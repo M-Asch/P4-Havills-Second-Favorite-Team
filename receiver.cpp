@@ -11,6 +11,7 @@ using namespace std;
 //==========================================
 Receiver::Receiver(){
   seqnum = 0;
+  len = 0;
   message = new char[1024];
 }
 
@@ -18,8 +19,9 @@ Receiver::Receiver(){
 //               Receiver
 //  Initializes a Receiver with inputed values
 //==========================================
-Receiver::Receiver(int s, char* c){
+Receiver::Receiver(int s, int l, char* c){
   seqnum = s;
+  len = l;
   message = c;
 }
 
@@ -32,6 +34,14 @@ int Receiver::getSeq(){
 }
 
 //==========================================
+//               getLen
+//           returns length
+//==========================================
+int Receiver::getLen(){
+  return len;
+}
+
+//==========================================
 //               getMessage
 //           returns message
 //==========================================
@@ -39,13 +49,20 @@ char* Receiver::getMessage(){
   return message;
 }
 
-
 //==========================================
 //               setSeq
 //        sets seqnum to inputed value
 //==========================================
 void Receiver::setSeq(int s){
   seqnum = s;
+}
+
+//==========================================
+//               setLen
+//        sets len to inputed value
+//==========================================
+void Receiver::setLen(int l){
+  len = l;
 }
 
 //==========================================
@@ -257,7 +274,7 @@ void Receiver::receiveMessage(int sockfd, struct addrinfo *ptr){
           bool temp = (std::find(std::begin(seen), std::end(seen), seq) != std::end(seen));
           if (temp == false){
              seen[count] = seq;
-             Receiver add(seq, data);
+             Receiver add(seq, length, data);
              received[count] = add;
              count++;
           }
@@ -269,8 +286,8 @@ void Receiver::receiveMessage(int sockfd, struct addrinfo *ptr){
     }
   }
 
-
-  // rebuild message here
+  // Sort packets into order
+  quickSort(received, 0, sizeof(received)-1);
 
 }
 
