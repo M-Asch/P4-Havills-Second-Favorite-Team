@@ -235,7 +235,7 @@ void Receiver::receiveMessage(int sockfd){
 		perror("recvfrom");
 		exit(1);
 	}
-  cout << "Did I appear?" << endl;
+  //cout << "Did I appear?" << endl;
 
 	//Get info about sender socket
 	char sender_ip_string[INET6_ADDRSTRLEN];
