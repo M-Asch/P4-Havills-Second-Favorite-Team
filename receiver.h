@@ -39,9 +39,9 @@ class Receiver{
     void setLen(int l);
     void setMessage(char* m);
 
-    int initialReceive(char buffer[], int sockfd, struct addrinfo *ptr); //char ip[], char port[]
-    int sendAck(unsigned long seq, int sockfd, struct addrinfo *ptr); //char ip[], char port[]
-    void receiveMessage(int sockfd, struct addrinfo *ptr); //int argc, char **argv
+    int initialReceive(char buffer[], char* sender_ip, char* p); //char ip[], char port[]
+    int sendAck(unsigned long seq, char* sender_ip, char* p); //char ip[], char port[]
+    void receiveMessage(int sockfd); ///  struct addrinfo *ptr
 
     void quickSort(Receiver arr[], int start, int end);
     int partition(Receiver arr[], int start, int end);

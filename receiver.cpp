@@ -77,7 +77,7 @@ void Receiver::setMessage(char* m){
 //               initialReceive
 //      Handles the process for the connection setup
 //====================================================
-int Receiver::initialReceive(char buffer[], int sockfd, struct addrinfo *ptr){
+int Receiver::initialReceive(char buffer[], char* sender_ip, char* p){
 
     unsigned long seq1 = buffer[0];
     unsigned long seq2 = buffer[1];
@@ -91,7 +91,7 @@ int Receiver::initialReceive(char buffer[], int sockfd, struct addrinfo *ptr){
 
 
     if(control == 1 && ack == 0 && length == 0){
-      sendAck(seq, sockfd, ptr);
+      sendAck(seq, sender_ip, p);
     }
     else{
       return -1;
@@ -105,7 +105,7 @@ int Receiver::initialReceive(char buffer[], int sockfd, struct addrinfo *ptr){
 //                          sendAck
 //      sends ACK back to the sender for data seq num recieved
 //=================================================================
-int Receiver::sendAck(unsigned long seq, int sockfd, struct addrinfo *ptr){
+int Receiver::sendAck(unsigned long seq, char* sender_ip, char* p){
   char buffer[8];
   memset(buffer, 0, 8);
 
@@ -127,7 +127,35 @@ int Receiver::sendAck(unsigned long seq, int sockfd, struct addrinfo *ptr){
 	buffer[6] = (length >> 8) & 0xff;
 	buffer[7] = length & 0xff;
 
-  int numbytes = sendto(sockfd, buffer, sizeof(buffer), 0, ptr->ai_addr, ptr->ai_addrlen);
+  struct addrinfo hints, *server_info;
+
+ 	memset(&hints, 0, sizeof hints);
+ 	hints.ai_family = AF_INET; //IPv4
+ 	hints.ai_socktype = SOCK_DGRAM; // UDP socket
+
+ 	int status = getaddrinfo(sender_ip, p, &hints, &server_info);
+ 	if (status != 0)
+ 	{
+ 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
+ 		exit(1);
+ 	}
+
+ 	int newSock;	//newsocket to send info to
+ 	struct addrinfo *ptr = server_info; //ptr to current struct addrinfo
+ 	while (ptr != NULL){				//attempt to build a socket for the senders ip and port
+ 		newSock = socket(ptr->ai_family, ptr->ai_socktype, 0);
+ 		if (newSock != -1){
+ 			break;
+ 		}
+ 		ptr = ptr->ai_next;
+ 	}
+ 	if (ptr == NULL){
+ 		fprintf(stderr, "client: failed to create socket\n");
+ 		exit(2);
+ 	}
+
+
+  int numbytes = sendto(newSock, buffer, sizeof(buffer), 0, ptr->ai_addr, ptr->ai_addrlen);
  	if ((numbytes) == -1)
  	{
  		return -1; // shows error occured in the sendto
@@ -190,7 +218,7 @@ int Receiver::partition(Receiver arr[], int start, int end){
 //               receiveMessage
 //      Handles the receiving messages and keeping track of what has been seen
 //=================================================================================
-void Receiver::receiveMessage(int sockfd, struct addrinfo *ptr){
+void Receiver::receiveMessage(int sockfd){
   char ip[16];
 	char portC[6];
 	int LISTENING = 1;
@@ -207,6 +235,7 @@ void Receiver::receiveMessage(int sockfd, struct addrinfo *ptr){
 		perror("recvfrom");
 		exit(1);
 	}
+  cout << "Did I appear?" << endl;
 
 	//Get info about sender socket
 	char sender_ip_string[INET6_ADDRSTRLEN];
@@ -223,7 +252,7 @@ void Receiver::receiveMessage(int sockfd, struct addrinfo *ptr){
 	memcpy(ip, sender_ip_string, sizeof(sender_ip_string));			//save ip
 	memcpy(portC, p, sizeof(p));		//and port string
 
-  if(initialReceive(buffer, sockfd, ptr) == -1){
+  if(initialReceive(buffer, sender_ip_string, p) == -1){
     perror("initialReceive");
     exit(1);
   }
@@ -280,15 +309,38 @@ void Receiver::receiveMessage(int sockfd, struct addrinfo *ptr){
           }
 
           if(control == 0 && ack == 0){
-            sendAck(seq, sockfd, ptr);
+            sendAck(seq, sender_ip_string, p);
           }
 	    }
     }
   }
 
   // Sort packets into order
-  quickSort(received, 0, sizeof(received)-1);
+  int dataLen = sizeof(received);
+  quickSort(received, 0, dataLen - 1);
 
+  int totalLen = 0;
+  for (int i = 0; i < dataLen; i++){
+     totalLen = totalLen + received[i].getLen();
+  }
+
+  char message[totalLen] = {};
+
+}
+
+
+//===============================================
+//               makeSocket
+//     create socket for receiving info
+//===============================================
+struct sockaddr_in makeSocket(void){
+	struct sockaddr_in server_addr;
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_port = htons(SERVERPORT);
+	server_addr.sin_addr.s_addr = INADDR_ANY;
+	memset(server_addr.sin_zero, 0, sizeof server_addr.sin_zero);
+
+	return server_addr;
 }
 
 //===============================================
@@ -297,57 +349,26 @@ void Receiver::receiveMessage(int sockfd, struct addrinfo *ptr){
 //===============================================
 int main(int argc, char **argv){
 
-  int sockfd;
-  struct addrinfo *temp;
+  // ESTABLISH SOCKET
+  int sockfd = socket(PF_INET, SOCK_DGRAM, 0);    // create a new UDP socket
+  if (sockfd == -1) {
+    perror("server: socket failed");
+    exit(0);
+  }
 
-	struct addrinfo hints, *server_info;   	//Sets up socket for client to send messages
-
-	memset(&hints, 0, sizeof hints);
- 	hints.ai_family = AF_INET; //IPv4
- 	hints.ai_socktype = SOCK_DGRAM; // UDP socket
-
-	int status = getaddrinfo(argv[1], SERVERPORTS, &hints, &server_info);
- 	if (status != 0)
- 	{
- 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
- 		exit(1);
- 	}
-
-	//int sockfd;
- 	struct addrinfo *ptr = server_info; //ptr to current struct addrinfo
- 	while (ptr != NULL)
- 	{
- 		sockfd = socket(ptr->ai_family, ptr->ai_socktype, 0);
- 		if (sockfd != -1)
- 		{
- 			break;
- 		}
- 		ptr = ptr->ai_next;
- 	}
-
- 	if (ptr == NULL)
- 	{
- 		fprintf(stderr, "client: failed to create socket\n");
- 		exit(2);
- 	}
-
-	temp = ptr;					//taking the addr information, and inserting it into the global variables
-  	temp->ai_addr = ptr->ai_addr;
-  	temp->ai_addrlen = ptr->ai_addrlen;
-
-	//Sets up socket for client for recieving message
-  	struct sockaddr_in my_addr;
-  	my_addr.sin_family = AF_INET;
-  	my_addr.sin_port = htons(SERVERPORT); //SERVERPORTS
-  	my_addr.sin_addr.s_addr = INADDR_ANY;
-  	memset(my_addr.sin_zero, 0, sizeof my_addr.sin_zero);
-
+  struct sockaddr_in server_addr = makeSocket();	//fill in socket ids
+  if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof server_addr) == -1){
+    close(sockfd);
+    perror("server: bind failed");
+    exit(1);
+  }
 
 	// ALL THE RECEIVING AND CHECKING IS HANDLED THROUGH THIS FUNCTION
  	Receiver r;
-	r.receiveMessage(sockfd, ptr);
+  cout << "start receive" << endl;
+	r.receiveMessage(sockfd);
 
-  freeaddrinfo(server_info);
+  //freeaddrinfo(server_info);
  	close(sockfd);
 
   return 0;
