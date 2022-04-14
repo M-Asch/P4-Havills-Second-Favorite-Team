@@ -5,32 +5,60 @@
 
 using namespace std;
 
-
+//==========================================
+//               Receiver
+//         Initializes a Receiver
+//==========================================
 Receiver::Receiver(){
   lastRecieve = 0;
   lastAcceptable = 0;
-  seen = new int[1024];
+  seen = new int[MAXBUFLEN];
 }
 
+//===============================================
+//               getLastRecieve
+//       returns value stored in lastRecieve
+//===============================================
 int Receiver::getLastRecieve(){
 	return lastRecieve;
 }
 
+//===============================================
+//               getLastAcceptable
+//      returns value stored in lastAcceptable
+//===============================================
 int Receiver::getLastAcceptable(){
 	return lastAcceptable;
 }
 
+//===============================================
+//               getSeen
+//      returns values stored in seen
+//===============================================
 int* Receiver::getSeen(){
 	return seen;
 }
 
-void Receiver::setSeen(){
-	seen = {};
+//===============================================
+//               setSeen
+//     sets seen to be equal to inputed array
+//===============================================
+void Receiver::setSeen(int* saw){
+	seen = saw;
 }
 
+//====================================================
+//               initialReceive
+//      Handles the process for the connection setup
+//====================================================
 int Receiver::initialReceive(char buffer[], int sockfd, struct addrinfo *ptr){
 
-    unsigned long seq = ((buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3]);
+    unsigned long seq1 = buffer[0];
+    unsigned long seq2 = buffer[1];
+    unsigned long seq3 = buffer[2];
+    unsigned long seq4 = buffer[3];
+
+    unsigned long seq = ((seq1 << 24) | (seq2 << 16) | (seq3 << 8) | seq4);
     unsigned short ack = (buffer[4]);
     unsigned short control = (buffer[5]);
     unsigned short length = (buffer[6] << 8 | buffer[7]);
@@ -43,11 +71,14 @@ int Receiver::initialReceive(char buffer[], int sockfd, struct addrinfo *ptr){
       return -1;
     }
 
-  	return 0;
+  	return seq;
 }
 
 
-// char* ip, char* port
+//=================================================================
+//                          sendAck
+//      sends ACK back to the sender for data seq num recieved
+//=================================================================
 int Receiver::sendAck(unsigned long seq, int sockfd, struct addrinfo *ptr){
   char buffer[8];
   memset(buffer, 0, 8);
@@ -80,6 +111,10 @@ int Receiver::sendAck(unsigned long seq, int sockfd, struct addrinfo *ptr){
 }
 
 
+//=================================================================================
+//               receiveMessage
+//      Handles the receiving messages and keeping track of what has been seen
+//=================================================================================
 void Receiver::receiveMessage(int sockfd, struct addrinfo *ptr){
   char ip[16];
 	char portC[6];
@@ -109,7 +144,6 @@ void Receiver::receiveMessage(int sockfd, struct addrinfo *ptr){
 	sprintf(p, "%d", port);					//turn port into string
 
 	buffer[numbytes] = '\0'; // add null terminator for printing (finalize message)
-  printf("balls\n");
 	//check to see if clients need to be updated, fill in client information
 	memcpy(ip, sender_ip_string, sizeof(sender_ip_string));			//save ip
 	memcpy(portC, p, sizeof(p));		//and port string
@@ -119,12 +153,55 @@ void Receiver::receiveMessage(int sockfd, struct addrinfo *ptr){
     exit(1);
   }
 
-	while (LISTENING == 1){
+  struct pollfd pfds[1];
 
-	}
+	while (LISTENING == 1){
+    char buffer[MAXBUFLEN]; //buffer to hold recieved message
+ 		struct sockaddr_storage sender_addr;      // sender's address (may be IPv6)
+		socklen_t addr1_len = sizeof sender_addr;  // length of this address
+
+		pfds[0].fd = sockfd;
+		pfds[0].events = POLLIN;
+
+		int num_events = poll(pfds, 2, -1);
+
+		if (num_events != 0) {
+			//printf("Type message: "); //Prompts client to enter message to send to chat partner
+			int pollin_happened = pfds[0].revents & POLLIN;
+      if (pollin_happened){
+          char receive[MAXBUFLEN];
+          int numbytes = recvfrom(sockfd, receive, MAXBUFLEN - 1, 0, (struct sockaddr *)&sender_addr, &addr1_len);
+          if (numbytes == -1){
+			     		perror("recvfrom");
+			     		exit(1);
+		   		}
+
+          unsigned long seq1 = receive[0];
+          unsigned long seq2 = receive[1];
+          unsigned long seq3 = receive[2];
+          unsigned long seq4 = receive[3];
+
+          unsigned long seq = ((seq1 << 24) | (seq2 << 16) | (seq3 << 8) | seq4);
+          unsigned short ack = (receive[4]);
+          unsigned short control = (receive[5]);
+          unsigned short length = (receive[6] << 8 | receive[7]);
+          char data[length];
+          for (int i = 0; i < length; i++){
+             data[i + 8] = receive[i + 8];
+          }
+
+          if(control == 0 && ack == 0){
+            sendAck(seq, sockfd, ptr);
+          }
+	    }
+    }
+  }
 }
 
-
+//===============================================
+//               main
+//     sets up socket and calls receiveMessage
+//===============================================
 int main(int argc, char **argv){
 
   int sockfd;

@@ -33,7 +33,7 @@ class Receiver{
     int getLastRecieve();
     int getLastAcceptable();
     int* getSeen();
-    void setSeen();
+    void setSeen(int* saw);
 
     int initialReceive(char buffer[], int sockfd, struct addrinfo *ptr); //char ip[], char port[]
     int sendAck(unsigned long seq, int sockfd, struct addrinfo *ptr); //char ip[], char port[]

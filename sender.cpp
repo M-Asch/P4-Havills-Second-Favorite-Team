@@ -274,7 +274,7 @@ int Sender::sendMessage(char* buffer, char* sender_ip, char* p, int send){
 int main (void){
 
 	int size = 20;
-	char m[20] = "red2.cs.denison.edu";
+	char m[20] = "red1.cs.denison.edu";
 	Sender msg(size, m);
 	msg.updateSent(52);
 
