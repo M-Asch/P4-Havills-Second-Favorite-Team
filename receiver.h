@@ -45,6 +45,7 @@ class Receiver{
 
     void quickSort(Receiver arr[], int start, int end);
     int partition(Receiver arr[], int start, int end);
+    void swap(Receiver *a, Receiver *b);
 
   private:
     int seqnum;
