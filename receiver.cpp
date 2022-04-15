@@ -181,7 +181,7 @@ void Receiver::quickSort(Receiver arr[], int start, int end){
 
   //Gets partition value for the sort
   int p = partition(arr, start, end);
-
+  cout << "post partition" << endl;
   //Sort left side
   quickSort(arr, start, p-1);
   //Sort right side
