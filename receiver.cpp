@@ -91,7 +91,7 @@ int Receiver::initialReceive(char buffer[], char* sender_ip, char* p){
 
 
     if(control == 1 && ack == 0 && length == 0){
-      sendAck(seq, sender_ip, p);
+      sendAck(seq, sender_ip, p, 0);
     }
     else{
       return -1;
@@ -100,18 +100,20 @@ int Receiver::initialReceive(char buffer[], char* sender_ip, char* p){
   	return seq;
 }
 
-
 //=================================================================
 //                          sendAck
 //      sends ACK back to the sender for data seq num recieved
 //=================================================================
-int Receiver::sendAck(unsigned long seq, char* sender_ip, char* p){
+int Receiver::sendAck(unsigned long seq, char* sender_ip, char* p, int final){
   char buffer[8];
   memset(buffer, 0, 8);
 
 	unsigned char control = 0x00;
   if (seq == 0){
     control = 0x01;
+  }
+  else if (final == 1){
+    control = 0x02;
   }
   unsigned char ack = 0x01;
 	unsigned short length = 0;
@@ -129,10 +131,10 @@ int Receiver::sendAck(unsigned long seq, char* sender_ip, char* p){
 
   struct addrinfo hints, *server_info;
 
- 	memset(&hints, 0, sizeof hints);
+ 	memset(&hints, 0, sizeof(hints));
  	hints.ai_family = AF_INET; //IPv4
  	hints.ai_socktype = SOCK_DGRAM; // UDP socket
-
+  cout << "seq " << seq << endl;
  	int status = getaddrinfo(sender_ip, p, &hints, &server_info);
  	if (status != 0)
  	{
@@ -215,7 +217,7 @@ int Receiver::partition(Receiver arr[], int start, int end){
 }
 
 //=================================================================================
-//               receiveMessage
+//                                 receiveMessage
 //      Handles the receiving messages and keeping track of what has been seen
 //=================================================================================
 void Receiver::receiveMessage(int sockfd){
@@ -235,7 +237,6 @@ void Receiver::receiveMessage(int sockfd){
 		perror("recvfrom");
 		exit(1);
 	}
-  //cout << "Did I appear?" << endl;
 
 	//Get info about sender socket
 	char sender_ip_string[INET6_ADDRSTRLEN];
@@ -252,7 +253,7 @@ void Receiver::receiveMessage(int sockfd){
 	memcpy(ip, sender_ip_string, sizeof(sender_ip_string));			//save ip
 	memcpy(portC, p, sizeof(p));		//and port string
 
-  if(initialReceive(buffer, sender_ip_string, p) == -1){
+  if(initialReceive(buffer, ip, portC) == -1){
     perror("initialReceive");
     exit(1);
   }
@@ -309,7 +310,11 @@ void Receiver::receiveMessage(int sockfd){
           }
 
           if(control == 0 && ack == 0){
-            sendAck(seq, sender_ip_string, p);
+            sendAck(seq, ip, portC, 0);
+          }
+          else if(control == 2 && ack == 0){
+            LISTENING = 0;
+            sendAck(seq, ip, portC, 1);
           }
 	    }
     }
@@ -325,6 +330,19 @@ void Receiver::receiveMessage(int sockfd){
   }
 
   char message[totalLen] = {};
+  int c = 0;
+  while (c < totalLen){
+    for (int i = 0; i < dataLen; i++){
+      char* temp = NULL;
+      temp = received[i].getMessage();
+      for (int j = 0; j < received[i].getLen(); j++){
+        message[c] = temp[i];
+        c++;
+      }
+    }
+  }
+
+  cout << message << endl;
 
 }
 
@@ -365,7 +383,7 @@ int main(int argc, char **argv){
 
 	// ALL THE RECEIVING AND CHECKING IS HANDLED THROUGH THIS FUNCTION
  	Receiver r;
-  cout << "start receive" << endl;
+  cout << "start receiving" << endl;
 	r.receiveMessage(sockfd);
 
   //freeaddrinfo(server_info);

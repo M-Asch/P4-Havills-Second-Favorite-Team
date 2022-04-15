@@ -40,7 +40,7 @@ class Receiver{
     void setMessage(char* m);
 
     int initialReceive(char buffer[], char* sender_ip, char* p);
-    int sendAck(unsigned long seq, char* sender_ip, char* p);
+    int sendAck(unsigned long seq, char* sender_ip, char* p, int final);
     void receiveMessage(int sockfd);
 
     void quickSort(Receiver arr[], int start, int end);
