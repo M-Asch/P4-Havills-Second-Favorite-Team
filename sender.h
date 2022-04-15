@@ -21,7 +21,7 @@
 #define SERVERPORTS "9090"
 #define MAXBUFLEN 100
 #define MAXDATALENGTH 1024
-#define MAXPACKETSOUT 5  
+#define MAXPACKETSOUT 5
 
 using namespace std;
 
@@ -42,6 +42,7 @@ class Sender{
 		int slidingWindow(char* hostname);
 		char* initialMessage(char* initial);
 		int sendMessage(char* buffer, char* sender_ip, char* p, int send);
+		char* finalMessage(char* final, int seq);
 
 	private:
 		char* message;

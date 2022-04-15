@@ -58,13 +58,13 @@ int Sender::slidingWindow(char* hostname){
 	//=============================
 	struct addrinfo hints,         // input to getaddrinfo()
 	                *server_info;  // head of linked list of results from getaddrinfo()
-                    
+
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET;         // IPv4
 	hints.ai_socktype = SOCK_DGRAM;    // UDP socket
 
   int status = getaddrinfo(hostname, SERVERPORTS, &hints, &server_info);
-	if (status != 0) 
+	if (status != 0)
 	{
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
 		exit(1);
@@ -73,46 +73,46 @@ int Sender::slidingWindow(char* hostname){
 	// loop through all the results and make a socket
 	int sockfd;
 	struct addrinfo *ptr = server_info;  // pointer to current struct addrinfo
-	while (ptr != NULL) 
+	while (ptr != NULL)
 	{
 	    sockfd = socket(ptr->ai_family, ptr->ai_socktype, 0);
-		if (sockfd != -1) 
+		if (sockfd != -1)
 		{
 			break;
 		}
 		ptr = ptr->ai_next;
 	}
 
-	if (ptr == NULL) 
+	if (ptr == NULL)
 	{
 		fprintf(stderr, "talker: failed to create socket\n");
 		exit(2);
 	}
- 
+
  //=============================
 	//Bind sender socket
 	//=============================
-	
+
 	int mysock = socket(PF_INET, SOCK_DGRAM, 0);    // create a new UDP socket
-	if (mysock == -1) 
+	if (mysock == -1)
 	{
 		perror("listener: socket");
 		exit(1);
 	}
-	
+
 	struct sockaddr_in my_addr;             // socket address to listen on
 	my_addr.sin_family = AF_INET;           // IPv4
 	my_addr.sin_port = htons(SERVERPORT);       // my port in network byte order
 	my_addr.sin_addr.s_addr = INADDR_ANY;   // bind to local IP address
 	memset(my_addr.sin_zero, 0, sizeof my_addr.sin_zero);  // zero out sin_zero
 
-	if (bind(mysock, (struct sockaddr *)&my_addr, sizeof my_addr) == -1) 
+	if (bind(mysock, (struct sockaddr *)&my_addr, sizeof my_addr) == -1)
 	{
 		close(sockfd);
 		perror("listener: bind");
 		exit(1);
 	}
- 
+
 	//=============================
 	//send initial ack message to reciever
 	//=============================
@@ -203,7 +203,7 @@ int Sender::slidingWindow(char* hostname){
 		pfds[1].fd = 0; //cin
 		pfds[1].events = POLLIN;
 
-		int num_events = poll(pfds, 2, 1000);
+		int num_events = poll(pfds, 2, 10000);
 
 		if (num_events != 0) {
 			//printf("Type message: "); //Prompts client to enter message to send to chat partner
@@ -225,7 +225,7 @@ int Sender::slidingWindow(char* hostname){
 				recievedack = (0 << 8) | recieve[4];
 				recievedcontrol = (0 << 8) | recieve[5];
 				recievedlength = (recieve[6] << 8) | recieve[7];
-        
+
 				//check to see if it was the initial message or a later one
 				if (initialrecieved == 0 && recievedack == 1 && recievedcontrol == 1){
 					lastAck = 0;      //update the last Ack recieved
@@ -253,24 +253,37 @@ int Sender::slidingWindow(char* hostname){
 			}//END OF if (pollin_happened1)
 		}//END OF if (num_events != 0)
     //THIS IS TO CHECK TO SEE IF A MESSAGE NEEDS TO BE RESENT
-    for(int messageNum = lastAck; messageNum < messageNum + 5; messageNum++){
-      if (messageNum > messageCount)
-        break;
-      else if(tracking[messageNum] == false){
-          int numbytes = sendto(sockfd, buffer[messageNum], sizeof(buffer[messageNum]), 0, ptr->ai_addr, ptr->ai_addrlen);
-				  if ((numbytes) == -1){
-			 		    perror("client: sendto");
-					 		exit(1);
-		 	    }
-      }
-      else if(tracking[messageNum] == true){
-        if (recievedseq - 1 == lastAck){
-            lastAck = recievedseq;
-        }
-      }
-    }
+		if(acked < messageCount){
+	    for(int messageNum = lastAck; messageNum < messageNum + 5; messageNum++){
+				cout << messageNum << messageCount << endl;
+	      if (messageNum >= messageCount)
+	        break;
+				else{
+					cout << "hello" << endl;
+		      int numbytes = sendto(sockfd, buffer[messageNum], sizeof(buffer[messageNum]), 0, ptr->ai_addr, ptr->ai_addrlen);
+					if ((numbytes) == -1){
+						perror("client: sendto");
+						exit(1);
+				 	}
+					else if(tracking[messageNum] == true){
+			  		if (recievedseq - 1 == lastAck){
+			    		lastAck = recievedseq;
+			     	}
+			  	}
+				}
+  		}
+		}
+		else{
+			char finalM[8];
+			memset(finalM, 0, 8);
+			finalMessage(finalM, seq);
+			int numbytes = sendto(sockfd, finalM, sizeof(finalM), 0, ptr->ai_addr, ptr->ai_addrlen);
+			if ((numbytes) == -1){
+					perror("client: sendto");
+					exit(1);
+			}
+		}
 	}//END OF while (acked < messageCount)
-  
 	return 0;
 }
 
@@ -293,6 +306,25 @@ char* Sender::initialMessage(char* initial){
 	return initial;
 }
 
+char* Sender::finalMessage(char* final, int seq){
+	unsigned long seqnum = seq;
+	unsigned short control = 2;
+	unsigned short length = 0;
+
+	final[0] = (seqnum >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
+	final[1] = (seqnum >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
+	final[2] = (seqnum >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
+	final[3] = seqnum & 0xff;		//00000000 00000000 00000000 (00000000)
+
+	final[4] = (control >> 8) &0xff; //(00000000) 00000001 this is the ACK
+	final[5] = control &0xff; //00000000 (00000001) this is the CONTROL
+
+	final[6] = (length >> 8) & 0xff;
+	final[7] = length & 0xff;
+
+	return final;
+}
+
 
 int Sender::sendMessage(char* buffer, char* sender_ip, char* p, int send){
 	return 0;
@@ -301,7 +333,7 @@ int Sender::sendMessage(char* buffer, char* sender_ip, char* p, int send){
 int main (void){
 
 	int size = 20;
-	char m[20] = "red2.cs.denison.edu";
+	char m[20] = "red1.cs.denison.edu";
 	Sender msg(size, m);
 	//msg.updateSent(52);
 
