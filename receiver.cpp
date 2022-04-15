@@ -78,18 +78,18 @@ void Receiver::setMessage(char* m){
 //      Handles the process for the connection setup
 //====================================================
 int Receiver::initialReceive(char buffer[], char* sender_ip, char* p){
-
+    // Set up sequence number for bit shifting
     unsigned long seq1 = buffer[0];
     unsigned long seq2 = buffer[1];
     unsigned long seq3 = buffer[2];
     unsigned long seq4 = buffer[3];
-
+    // bit shift buffer to place chars into proper datatypes
     unsigned long seq = ((seq1 << 24) | (seq2 << 16) | (seq3 << 8) | seq4);
     unsigned short ack = (buffer[4]);
     unsigned short control = (buffer[5]);
     unsigned short length = (buffer[6] << 8 | buffer[7]);
 
-
+    //check that values for setup messages match, if yes send acknowledgement
     if(control == 1 && ack == 0 && length == 0){
       sendAck(seq, sender_ip, p, 0);
     }
@@ -108,6 +108,7 @@ int Receiver::sendAck(unsigned long seq, char* sender_ip, char* p, int final){
   char buffer[8];
   memset(buffer, 0, 8);
 
+  // Establishes control value in buffer, data = 0, setup = 1, teardown = 2
 	unsigned char control = 0x00;
   if (seq == 0){
     control = 0x01;
@@ -118,6 +119,7 @@ int Receiver::sendAck(unsigned long seq, char* sender_ip, char* p, int final){
   unsigned char ack = 0x01;
 	unsigned short length = 0;
 
+  // bit shifting for values into buffer
 	buffer[0] = (seq >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
 	buffer[1] = (seq >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
 	buffer[2] = (seq >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
@@ -129,6 +131,8 @@ int Receiver::sendAck(unsigned long seq, char* sender_ip, char* p, int final){
 	buffer[6] = (length >> 8) & 0xff;
 	buffer[7] = length & 0xff;
 
+
+  // Setting up address information to send ACK
   struct addrinfo hints, *server_info;
 
  	memset(&hints, 0, sizeof(hints));
@@ -156,7 +160,7 @@ int Receiver::sendAck(unsigned long seq, char* sender_ip, char* p, int final){
  		exit(2);
  	}
 
-
+  // Send the ACK buffer to the sender
   int numbytes = sendto(newSock, buffer, sizeof(buffer), 0, ptr->ai_addr, ptr->ai_addrlen);
  	if ((numbytes) == -1)
  	{
@@ -175,6 +179,7 @@ void Receiver::quickSort(Receiver arr[], int start, int end){
     return;
   }
 
+  //Gets partition value for the sort
   int p = partition(arr, start, end);
 
   //Sort left side
@@ -197,9 +202,11 @@ int Receiver::partition(Receiver arr[], int start, int end){
     }
   }
 
+  //establishes index for pivot
   int pivotIndex = start + count;
   swap(arr[pivotIndex], arr[start]);
 
+  //handles pivoting of values
   int i = start, j = end;
   while (i < pivotIndex && j > pivotIndex){
     while (arr[i].getSeq() <= pivot){
@@ -253,6 +260,7 @@ void Receiver::receiveMessage(int sockfd){
 	memcpy(ip, sender_ip_string, sizeof(sender_ip_string));			//save ip
 	memcpy(portC, p, sizeof(p));		//and port string
 
+  // Handles initial setup message
   if(initialReceive(buffer, ip, portC) == -1){
     perror("initialReceive");
     exit(1);
@@ -265,6 +273,7 @@ void Receiver::receiveMessage(int sockfd){
 
   struct pollfd pfds[1];
 
+  // Handles rest of receiving data
 	while (LISTENING == 1){
     char buffer[MAXBUFLEN]; //buffer to hold recieved message
  		struct sockaddr_storage sender_addr;      // sender's address (may be IPv6)
@@ -279,13 +288,14 @@ void Receiver::receiveMessage(int sockfd){
 			//printf("Type message: "); //Prompts client to enter message to send to chat partner
 			int pollin_happened = pfds[0].revents & POLLIN;
       if (pollin_happened){
-          char receive[MAXBUFLEN];
+          char receive[MAXBUFLEN]; //receives incoming buffer
           int numbytes = recvfrom(sockfd, receive, MAXBUFLEN - 1, 0, (struct sockaddr *)&sender_addr, &addr1_len);
           if (numbytes == -1){
 			     		perror("recvfrom");
 			     		exit(1);
 		   		}
 
+          // breaks up buffer into proper datatypes
           unsigned long seq1 = receive[0];
           unsigned long seq2 = receive[1];
           unsigned long seq3 = receive[2];
@@ -300,7 +310,7 @@ void Receiver::receiveMessage(int sockfd){
              data[i + 8] = receive[i + 8];
           }
 
-          // checks to see if seqnum had been seen yet
+          // checks to see if seqnum had been seen yet, if not adds to lists to store data and keep track of what has been seen
           bool temp = (std::find(std::begin(seen), std::end(seen), seq) != std::end(seen));
           if (temp == false){
              seen[count] = seq;
@@ -309,10 +319,11 @@ void Receiver::receiveMessage(int sockfd){
              count++;
           }
 
+          // checks variables that should not have changed to allow for ACK to be sent
           if(control == 0 && ack == 0){
             sendAck(seq, ip, portC, 0);
           }
-          else if(control == 2 && ack == 0){
+          else if(control == 2 && ack == 0){ // Handles sending the ACK for teardown
             LISTENING = 0;
             sendAck(seq, ip, portC, 1);
           }
@@ -324,11 +335,13 @@ void Receiver::receiveMessage(int sockfd){
   int dataLen = sizeof(received);
   quickSort(received, 0, dataLen - 1);
 
+  // gets total length of all chars received
   int totalLen = 0;
   for (int i = 0; i < dataLen; i++){
      totalLen = totalLen + received[i].getLen();
   }
 
+  // pieces together the original message and stores in message
   char message[totalLen] = {};
   int c = 0;
   while (c < totalLen){
@@ -342,6 +355,7 @@ void Receiver::receiveMessage(int sockfd){
     }
   }
 
+  // returns message in receiver terminal
   cout << message << endl;
 
 }
