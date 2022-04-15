@@ -169,6 +169,7 @@ int Sender::slidingWindow(char* hostname){
 			buffer[i][8 + x] = message[starting + x];
 		}
 		starting = starting + message_length;
+		seq++;
 	}
 
 	//check message
@@ -255,11 +256,9 @@ int Sender::slidingWindow(char* hostname){
     //THIS IS TO CHECK TO SEE IF A MESSAGE NEEDS TO BE RESENT
 		if(acked < messageCount){
 	    for(int messageNum = lastAck; messageNum < messageNum + 5; messageNum++){
-				cout << messageNum << messageCount << endl;
 	      if (messageNum >= messageCount)
 	        break;
 				else{
-					cout << "hello" << endl;
 		      int numbytes = sendto(sockfd, buffer[messageNum], sizeof(buffer[messageNum]), 0, ptr->ai_addr, ptr->ai_addrlen);
 					if ((numbytes) == -1){
 						perror("client: sendto");
@@ -277,11 +276,20 @@ int Sender::slidingWindow(char* hostname){
 			char finalM[8];
 			memset(finalM, 0, 8);
 			finalMessage(finalM, seq);
-			int numbytes = sendto(sockfd, finalM, sizeof(finalM), 0, ptr->ai_addr, ptr->ai_addrlen);
+			int numbytes = sendto(sockfd, finalM, sizeof(finalM), 0, ptr->ai_addr, ptr->ai_addrlen);//send final message
 			if ((numbytes) == -1){
 					perror("client: sendto");
 					exit(1);
 			}
+
+			char recieve[8];
+			memset(recieve, 0 , 8);
+			numbytes = recvfrom(sockfd, recieve, 8, 0, (struct sockaddr *)&sender_addr, &addr1_len);
+			if (numbytes == -1)
+			{
+					perror("recvfrom");
+					exit(1);
+			}//add check for control and ack
 		}
 	}//END OF while (acked < messageCount)
 	return 0;
