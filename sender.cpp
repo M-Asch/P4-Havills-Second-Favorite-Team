@@ -93,7 +93,7 @@ int Sender::slidingWindow(char* hostname){
 	//Bind sender socket
 	//=============================
 
-	int mysock = socket(PF_INET, SOCK_DGRAM, 0);    // create a new UDP socket
+	/*int mysock = socket(PF_INET, SOCK_DGRAM, 0);    // create a new UDP socket
 	if (mysock == -1)
 	{
 		perror("listener: socket");
@@ -111,7 +111,7 @@ int Sender::slidingWindow(char* hostname){
 		close(sockfd);
 		perror("listener: bind");
 		exit(1);
-	}
+	}*/
 
 	//=============================
 	//send initial ack message to reciever
@@ -119,14 +119,6 @@ int Sender::slidingWindow(char* hostname){
 	char initM[8];
 	memset(initM, 0, 8);
 	initialMessage(initM);
-
-	int numbytes = sendto(sockfd, initM, sizeof(initM), 0, ptr->ai_addr, ptr->ai_addrlen);
- 	if ((numbytes) == -1)
- 	{
- 		perror("client: sendto");
- 		exit(1);
- 	}
-	cout << "initial message sent" << endl;
 
 	//=============================
 	//seperate message into sizes and begin seqnum
@@ -142,13 +134,14 @@ int Sender::slidingWindow(char* hostname){
 	int message_length = 0;
 	int starting = 0;
 
-	char buffer[messageCount][MAXDATALENGTH];
+	char buffer[messageCount][MAXDATALENGTH + 8];
 
 	for (int i = 0; i < (messageCount); i++){				//find out how much to write to the length
-		memset(buffer[i],0,MAXDATALENGTH);				//make sure its 0d out
+		memset(buffer[i],0,MAXDATALENGTH + 8);				//make sure its 0d out
 		if (remaining_length > MAXDATALENGTH){
 			remaining_length = remaining_length - MAXDATALENGTH;
 			message_length = MAXDATALENGTH;
+			//cout << messageCount << remaining_length << message_length << endl;
 		}
 		else{
 			message_length = length;
@@ -172,6 +165,7 @@ int Sender::slidingWindow(char* hostname){
 		seq++;
 	}
 
+	cout << "hello" << endl;
 	//check message
 	/*for (int i = 0; i < 27; i++){
 		printf("%c \n", buffer[0][i]);
@@ -193,6 +187,13 @@ int Sender::slidingWindow(char* hostname){
  	//sEND initialMessage and begin polling
 	//=============================
 
+	int numbytes = sendto(sockfd, initM, sizeof(initM), 0, ptr->ai_addr, ptr->ai_addrlen);
+ 	if ((numbytes) == -1)
+ 	{
+ 		perror("client: sendto");
+ 		exit(1);
+ 	}
+	cout << "initial message sent" << endl;
 
 	while (acked < messageCount){
  		struct sockaddr_storage sender_addr;      // sender's address (may be IPv6)
@@ -204,7 +205,7 @@ int Sender::slidingWindow(char* hostname){
 		pfds[1].fd = 0; //cin
 		pfds[1].events = POLLIN;
 
-		int num_events = poll(pfds, 2, 10000);
+		int num_events = poll(pfds, 2, 5000);
 
 		if (num_events != 0) {
 			//printf("Type message: "); //Prompts client to enter message to send to chat partner
@@ -220,6 +221,7 @@ int Sender::slidingWindow(char* hostname){
 		     		perror("recvfrom");
 		     		exit(1);
 	   		}
+				//r = 1;
 
 				//get the information from the ack message
 				recievedseq = ((recieve[0] << 24) | (recieve[1] << 16) | (recieve[2] << 8) | recieve[3]);
@@ -254,21 +256,29 @@ int Sender::slidingWindow(char* hostname){
 			}//END OF if (pollin_happened1)
 		}//END OF if (num_events != 0)
     //THIS IS TO CHECK TO SEE IF A MESSAGE NEEDS TO BE RESENT
+		if (initialrecieved == 0){
+			int numbytes = sendto(sockfd, initM, sizeof(initM), 0, ptr->ai_addr, ptr->ai_addrlen);
+		 	if ((numbytes) == -1)
+		 	{
+		 		perror("client: sendto");
+		 		exit(1);
+		 	}
+		}
 		if(acked < messageCount){
 	    for(int messageNum = lastAck; messageNum < messageNum + 5; messageNum++){
 	      if (messageNum >= messageCount)
 	        break;
+				else if(tracking[messageNum] == true){
+						if (recievedseq - 1 == lastAck){
+							lastAck = recievedseq;
+						}
+					}
 				else{
 		      int numbytes = sendto(sockfd, buffer[messageNum], sizeof(buffer[messageNum]), 0, ptr->ai_addr, ptr->ai_addrlen);
 					if ((numbytes) == -1){
 						perror("client: sendto");
 						exit(1);
 				 	}
-					else if(tracking[messageNum] == true){
-			  		if (recievedseq - 1 == lastAck){
-			    		lastAck = recievedseq;
-			     	}
-			  	}
 				}
   		}
 		}
@@ -341,7 +351,12 @@ int Sender::sendMessage(char* buffer, char* sender_ip, char* p, int send){
 int main (void){
 
 	int size = 20;
-	char m[20] = "red1.cs.denison.edu";
+	char m[20];
+	memset(m,0,20);
+	string s = "red1.cs.denison.edu";
+	for (int i =0; i < (s.length()); i++){
+		m[i] = s[i];
+	}
 	Sender msg(size, m);
 	//msg.updateSent(52);
 
