@@ -174,86 +174,47 @@ int Receiver::sendAck(unsigned long seq, char* sender_ip, char* p, int final){
 //               quickSort
 //      Sorts an array from least to greatest
 //====================================================
-void Receiver::quickSort(Receiver arr[], int start, int end){
-  // if (start < end){
-  //   return;
-  // }
-  //
-  // //Gets partition value for the sort
-  // int p = partition(arr, start, end);
-  // cout << "post partition" << endl;
-  // //Sort left side
-  // quickSort(arr, start, p-1);
-  // //Sort right side
-  // quickSort(arr, p+1, end);
-  if (start < end){
+void Receiver::quickSort(Receiver arr[], int low, int high){
+  if (low < high){
     cout << "part" << endl;
-    int p = partition(arr, start, p-1);
+    int p = partition(arr, low, p-1);
     cout << "after part" << endl;
-    quickSort(arr, start, p-1);
-    quickSort(arr, p+1, end);
+    quickSort(arr, low, p-1);
+    quickSort(arr, p+1, high);
   }
-
 }
 
 //====================================================
 //               partition
 //      partition of array for quickSort
 //====================================================
-int Receiver::partition(Receiver arr[], int start, int end){
-  // int pivot = arr[start].getSeq();
-  //
-  // int count = 0;
-  // for (int i = start + 1; i <= end; i++){
-  //   if (arr[i].getSeq() <= pivot){
-  //     count++;
-  //   }
-  // }
-  //
-  // //establishes index for pivot
-  // int pivotIndex = start + count;
-  // swap(arr[pivotIndex], arr[start]);
-  //
-  // //handles pivoting of values
-  // int i = start, j = end;
-  // while (i < pivotIndex && j > pivotIndex){
-  //   while (arr[i].getSeq() <= pivot){
-  //     i++;
-  //   }
-  //   while (arr[j].getSeq() > pivot){
-  //     j--;
-  //   }
-  //   if (i < pivotIndex && j > pivotIndex){
-  //     swap(arr[i++], arr[j--]);
-  //   }
-  // }
-  //
-  // return pivotIndex;
-  int pivot = arr[end].getSeq();
-  cout << "p0" << endl;
-  int temp = (start - 1);
-  cout << "p1" << endl;
-  for (int i = start; i < end; i++){
-     if (arr[i].getSeq() <= pivot){
-       temp++;
-       swap(&arr[temp], &arr[i]);
-     }
-  }
-  cout << "p2" << endl;
-  swap(&arr[temp + 1], &arr[end]);
+int Receiver::partition(Receiver* arr, int low, int high){
+  int pivot = arr[high].getSeq();
+  int i = (low-1);
 
-  return (temp + 1);
+  for (int j = low; j < high; j++){
+    if (arr[j].getSeq() <= pivot){
+      i++;
+
+      swap(&arr[i], &arr[j]);
+    }
+  }
+
+  swap(&arr[i+1], &arr[high]);
+
+  return (i+1);
 }
 
 //====================================================
 //               swap
-//      swaps parts of an array
+//      swaps parts of an array of Receivers
 //====================================================
 void Receiver::swap(Receiver *a, Receiver *b){
   Receiver t = *a;
   *a = *b;
   *b = t;
 }
+
 
 //=================================================================================
 //                                 receiveMessage
@@ -336,7 +297,7 @@ void Receiver::receiveMessage(int sockfd){
           unsigned long seq4 = receive[3];
 
           unsigned long seq = ((seq1 << 24) | (seq2 << 16) | (seq3 << 8) | seq4);
-          //cout << "seq " << seq << endl;
+          cout << "seq " << seq << endl;
           unsigned short ack = (receive[4]);
           //cout << "ack " << ack << endl;
           unsigned short control = (receive[5]);
@@ -345,16 +306,17 @@ void Receiver::receiveMessage(int sockfd){
           //cout << "len " << length << endl;
           char data[length];
           for (int i = 0; i < length; i++){
-             data[i] = receive[i + 7];
+             data[i] = receive[i + 8];
           }
           // for (int i = 0; i < length; i++){
           //   cout << data[i] << endl;
           // }
           //cout << "{{{{{{{{{{{{{{{{{{}}}}}}}}}}}}}}}}}}" << endl;
+
           // checks to see if seqnum had been seen yet, if not adds to lists to store data and keep track of what has been seen
           bool temp = (std::find(std::begin(seen), std::end(seen), seq) != std::end(seen));
-          if (temp == false){
-
+          if (temp == false && control != 2){
+             cout << "seen " << seq << endl;
              seen[count] = seq;
              Receiver add(seq, length, data);
              received[count] = add;
@@ -373,7 +335,8 @@ void Receiver::receiveMessage(int sockfd){
     }
   }
   cout << "out of loop" << endl;
-  // Sort packets into order
+
+  //Sort packets into order
   int dataLen = 0;
   bool t = true;
   while (t == true){
@@ -384,7 +347,8 @@ void Receiver::receiveMessage(int sockfd){
     dataLen++;
   }
 
-  quickSort(received, 0, dataLen - 1);
+  // Sort out out of order sequence numbers
+  quickSort(received, 0, (dataLen-1));
 
   cout << "post sort" << endl;
   // gets total length of all chars received
@@ -408,8 +372,9 @@ void Receiver::receiveMessage(int sockfd){
   }
 
   // returns message in receiver terminal
-  cout << message << endl;
-
+  for (int i = 0; i < totalLen; i++){
+    cout << message[i] << endl;
+  }
 }
 
 
@@ -451,7 +416,7 @@ int main(int argc, char **argv){
  	Receiver r;
   cout << "start receiving" << endl;
 	r.receiveMessage(sockfd);
-
+  cout << "end receive" << endl;
   //freeaddrinfo(server_info);
  	close(sockfd);
 

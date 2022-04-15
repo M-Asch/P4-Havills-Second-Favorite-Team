@@ -47,6 +47,9 @@ class Receiver{
     int partition(Receiver arr[], int start, int end);
     void swap(Receiver *a, Receiver *b);
 
+    //void heapify(Receiver arr[], int size, int node);
+    //void heapSort(Receiver arr[], int size);
+
   private:
     int seqnum;
     int len;
