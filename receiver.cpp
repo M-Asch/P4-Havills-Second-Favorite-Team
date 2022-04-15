@@ -302,13 +302,13 @@ void Receiver::receiveMessage(int sockfd){
           unsigned long seq4 = receive[3];
 
           unsigned long seq = ((seq1 << 24) | (seq2 << 16) | (seq3 << 8) | seq4);
-          cout << "seq " << seq << endl;
+          //cout << "seq " << seq << endl;
           unsigned short ack = (receive[4]);
-          cout << "ack " << ack << endl;
+          //cout << "ack " << ack << endl;
           unsigned short control = (receive[5]);
-          cout << "control " << control << endl;
+          //cout << "control " << control << endl;
           unsigned short length = (receive[6] << 8 | receive[7]);
-          cout << "len " << length << endl;
+          //cout << "len " << length << endl;
           char data[length];
           for (int i = 0; i < length; i++){
              data[i] = receive[i + 7];
@@ -316,7 +316,7 @@ void Receiver::receiveMessage(int sockfd){
           // for (int i = 0; i < length; i++){
           //   cout << data[i] << endl;
           // }
-          cout << "{{{{{{{{{{{{{{{{{{}}}}}}}}}}}}}}}}}}" << endl;
+          //cout << "{{{{{{{{{{{{{{{{{{}}}}}}}}}}}}}}}}}}" << endl;
           // checks to see if seqnum had been seen yet, if not adds to lists to store data and keep track of what has been seen
           bool temp = (std::find(std::begin(seen), std::end(seen), seq) != std::end(seen));
           if (temp == false){
