@@ -350,7 +350,6 @@ void Receiver::receiveMessage(int sockfd){
   // Sort out out of order sequence numbers
   quickSort(received, 0, (dataLen-1));
 
-  cout << "post sort" << endl;
   // gets total length of all chars received
   int totalLen = 0;
   for (int i = 0; i < dataLen; i++){
@@ -373,7 +372,7 @@ void Receiver::receiveMessage(int sockfd){
 
   // returns message in receiver terminal
   for (int i = 0; i < totalLen; i++){
-    cout << message[i] << endl;
+    cout << message[i][2] << endl;
   }
 }
 
