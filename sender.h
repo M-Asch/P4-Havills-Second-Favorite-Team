@@ -21,6 +21,7 @@
 #define SERVERPORTS "9090"
 #define MAXBUFLEN 100
 #define MAXDATALENGTH 1024
+#define MAXPACKETSOUT 5  
 
 using namespace std;
 
