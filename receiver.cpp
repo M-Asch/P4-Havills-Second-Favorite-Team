@@ -138,7 +138,7 @@ int Receiver::sendAck(unsigned long seq, char* sender_ip, char* p, int final){
  	memset(&hints, 0, sizeof(hints));
  	hints.ai_family = AF_INET; //IPv4
  	hints.ai_socktype = SOCK_DGRAM; // UDP socket
-  cout << "seq " << seq << endl;
+  //cout << "seq " << seq << endl;
  	int status = getaddrinfo(sender_ip, p, &hints, &server_info);
  	if (status != 0)
  	{
@@ -302,14 +302,21 @@ void Receiver::receiveMessage(int sockfd){
           unsigned long seq4 = receive[3];
 
           unsigned long seq = ((seq1 << 24) | (seq2 << 16) | (seq3 << 8) | seq4);
+          cout << "seq " << seq << endl;
           unsigned short ack = (receive[4]);
+          cout << "ack " << ack << endl;
           unsigned short control = (receive[5]);
+          cout << "control " << control << endl;
           unsigned short length = (receive[6] << 8 | receive[7]);
+          cout << "len " << length << endl;
           char data[length];
           for (int i = 0; i < length; i++){
-             data[i + 8] = receive[i + 8];
+             data[i] = receive[i + 7];
           }
-
+          // for (int i = 0; i < length; i++){
+          //   cout << data[i] << endl;
+          // }
+          cout << "{{{{{{{{{{{{{{{{{{}}}}}}}}}}}}}}}}}}" << endl;
           // checks to see if seqnum had been seen yet, if not adds to lists to store data and keep track of what has been seen
           bool temp = (std::find(std::begin(seen), std::end(seen), seq) != std::end(seen));
           if (temp == false){
@@ -330,11 +337,12 @@ void Receiver::receiveMessage(int sockfd){
 	    }
     }
   }
-
+  cout << "out of loop" << endl;
   // Sort packets into order
   int dataLen = sizeof(received);
   quickSort(received, 0, dataLen - 1);
 
+  cout << "post sort" << endl;
   // gets total length of all chars received
   int totalLen = 0;
   for (int i = 0; i < dataLen; i++){
