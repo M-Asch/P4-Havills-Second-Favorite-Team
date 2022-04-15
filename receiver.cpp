@@ -374,7 +374,16 @@ void Receiver::receiveMessage(int sockfd){
   }
   cout << "out of loop" << endl;
   // Sort packets into order
-  int dataLen = sizeof(received);
+  int dataLen = 0;
+  bool t = true;
+  while (t == true){
+    if (received[dataLen].getSeq() == 0){
+      t = false;
+      dataLen--;
+    }
+    dataLen++;
+  }
+
   quickSort(received, 0, dataLen - 1);
 
   cout << "post sort" << endl;
