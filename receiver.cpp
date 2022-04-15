@@ -372,7 +372,7 @@ void Receiver::receiveMessage(int sockfd){
 
   // returns message in receiver terminal
   for (int i = 0; i < totalLen; i++){
-    cout << message[i][2] << endl;
+    cout << message[i] << endl;
   }
 }
 
