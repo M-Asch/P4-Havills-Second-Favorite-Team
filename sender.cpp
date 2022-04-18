@@ -125,16 +125,16 @@ int Sender::slidingWindow(char* hostname){
 			message_length = remaining_length;        //if message is less than storage space
 			remaining_length = 0;
 		}
-		buffer[i][0] = (seq >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
-		buffer[i][1] = (seq >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
-		buffer[i][2] = (seq >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
-		buffer[i][3] = seq & 0xff;		//00000000 00000000 00000000 (00000000)
+		buffer[i][0] = (htons(seq) >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
+		buffer[i][1] = (htons(seq) >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
+		buffer[i][2] = (htons(seq) >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
+		buffer[i][3] = htons(seq) & 0xff;		//00000000 00000000 00000000 (00000000)
 
 		buffer[i][4] = ack &0xff; //00000000(00000001) this is the ACK
 		buffer[i][5] = control &0xff; //00000000 (00000001) this is the CONTROL
 
-		buffer[i][6] = (message_length >> 8) & 0xff;
-		buffer[i][7] = message_length & 0xff;
+		buffer[i][6] = (htons(message_length) >> 8) & 0xff;
+		buffer[i][7] = htons(message_length) & 0xff;
 
 		for (int x = 0; x < message_length; x++){		//copy message into the string
 			buffer[i][8 + x] = message[starting + x];
@@ -167,7 +167,7 @@ int Sender::slidingWindow(char* hostname){
  	}
 	//cout << "initial message sent" << endl;
 
-	while (acked < messageCount){
+	while (acked <= messageCount){
  		struct sockaddr_storage sender_addr;      // sender's address (may be IPv6)
 		socklen_t addr1_len = sizeof sender_addr;  // length of this address
 
@@ -179,7 +179,7 @@ int Sender::slidingWindow(char* hostname){
 
 		int num_events = poll(pfds, 2, 5000);
    
-   int messageRecieved = 0;
+    int messageRecieved = 0;
 
 		if (num_events != 0) {
 			//printf("Type message: "); //Prompts client to enter message to send to chat partner
@@ -196,13 +196,12 @@ int Sender::slidingWindow(char* hostname){
 		     		exit(1);
 	   		}
         messageRecieved = 1;
-				//r = 1;
 
 				//get the information from the ack message
-				recievedseq = ((recieve[0] << 24) | (recieve[1] << 16) | (recieve[2] << 8) | recieve[3]);
+				recievedseq = ntohs((recieve[0] << 24) | (recieve[1] << 16) | (recieve[2] << 8) | recieve[3]);
 				recievedack = (0 << 8) | recieve[4];
 				recievedcontrol = (0 << 8) | recieve[5];
-				recievedlength = (recieve[6] << 8) | recieve[7];
+				recievedlength = ntohs((recieve[6] << 8) | recieve[7]);
 
 				//check to see if it was the initial message or a later one
 				if (initialrecieved == 0 && recievedack == 1 && recievedcontrol == 1){
@@ -223,6 +222,10 @@ int Sender::slidingWindow(char* hostname){
 					}
 
 				}//END OF if (initialrecieved == 0 && recievedack == 1 && recievedcontrol == 1)
+        else if (recievedack == 1 && recievedcontrol == 2){
+          acked++;
+          return 0;
+        }
 				else if (recievedack == 1 && recievedcontrol == 0){	//if the ack was not the setup ack, add it as received
           //cout << "Recieved an ACK" << endl;
 					tracking[recievedseq] = true;
@@ -280,24 +283,6 @@ int Sender::slidingWindow(char* hostname){
 				perror("client: sendto");
 		    exit(1);
  			}
-      
-      char recieve[8];
- 			memset(recieve, 0 , 8);
-      int done = 0;
-      while (done != 1){
-      numbytes = recvfrom(sockfd, recieve, 8, 0, (struct sockaddr *)&sender_addr, &addr1_len);
- 	    if (numbytes == -1){
-       		perror("recvfrom");
-       		exit(1);
-		  }
-      recievedack = (0 << 8) | recieve[4];
-      recievedcontrol = (0 << 8) | recieve[5];
-      if (recievedack == 1 && recievedcontrol == 2){
-        //cout << "Final Message Recieved" << endl;
-        done = 1;
-        return 0;
-      }
-      }
     }
 	}//END OF while (acked < messageCount)
 	return 0;
@@ -308,16 +293,16 @@ char* Sender::initialMessage(char* initial){
 	unsigned short control = 1;
 	unsigned short length = 0;
 
-	initial[0] = (seqnum >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
-	initial[1] = (seqnum >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
-	initial[2] = (seqnum >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
-	initial[3] = seqnum & 0xff;		//00000000 00000000 00000000 (00000000)
+	initial[0] = (htons(seqnum) >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
+	initial[1] = (htons(seqnum) >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
+	initial[2] = (htons(seqnum) >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
+	initial[3] = htons(seqnum) & 0xff;		//00000000 00000000 00000000 (00000000)
 
 	initial[4] = (control >> 8) &0xff; //(00000000) 00000001 this is the ACK
 	initial[5] = control &0xff; //00000000 (00000001) this is the CONTROL
 
-	initial[6] = (length >> 8) & 0xff;
-	initial[7] = length & 0xff;
+	initial[6] = (htons(length) >> 8) & 0xff;
+	initial[7] = htons(length) & 0xff;
 
 	return initial;
 }
@@ -327,16 +312,16 @@ char* Sender::finalMessage(char* final, int seq){
 	unsigned short control = 2;
 	unsigned short length = 0;
 
-	final[0] = (seqnum >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
-	final[1] = (seqnum >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
-	final[2] = (seqnum >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
-	final[3] = seqnum & 0xff;		//00000000 00000000 00000000 (00000000)
+	final[0] = (htons(seqnum) >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
+	final[1] = (htons(seqnum) >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
+	final[2] = (htons(seqnum) >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
+	final[3] = htons(seqnum) & 0xff;		//00000000 00000000 00000000 (00000000)
 
 	final[4] = (control >> 8) &0xff; //(00000000) 00000001 this is the ACK
 	final[5] = control &0xff; //00000000 (00000001) this is the CONTROL
 
-	final[6] = (length >> 8) & 0xff;
-	final[7] = length & 0xff;
+	final[6] = (htons(length) >> 8) & 0xff;
+	final[7] = htons(length) & 0xff;
 
 	return final;
 }

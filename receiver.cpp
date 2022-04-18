@@ -332,6 +332,7 @@ void Receiver::receiveMessage(int sockfd){
 	    }
     }
   }
+  cout << "out of loop" << endl;
 
   //Sort packets into order
   int dataLen = 0;
@@ -373,4 +374,7 @@ void Receiver::receiveMessage(int sockfd){
   }
   cout << endl;
 
+  //message[totalLen] = '\0';
+  //printf("\"%s\"\n", message);
 }
+
