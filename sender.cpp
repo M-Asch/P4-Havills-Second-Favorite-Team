@@ -223,10 +223,10 @@ int Sender::slidingWindow(char* hostname){
           				return 0;
         			}
 				else if (recievedack == 1 && recievedcontrol == 0){	//if the ack was not the setup ack, add it as received
-					tracking[recievedseq] = true;
+					tracking[recievedseq - 1] = true;
          				acked++;                            //lets us know when all packeges have been acked
-          				if (recievedseq - 1 == lastAck){
-            					lastAck = recievedseq;
+          				if (recievedseq - 2 == lastAck){
+            					lastAck = recievedseq - 1;
           				}
 				}
 		 	}
@@ -249,8 +249,8 @@ int Sender::slidingWindow(char* hostname){
 	      		if (messageNum >= messageCount)        //if there are no more messages to send
 	        		break;
 			else if(tracking[messageNum] == true){    //if the message has already been acked
-				if (recievedseq - 1 == lastAck){
-					lastAck = recievedseq;
+				if (recievedseq - 2 == lastAck){
+					lastAck = recievedseq - 1;
 					}
 				}
 			else{
