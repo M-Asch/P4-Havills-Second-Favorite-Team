@@ -206,7 +206,7 @@ int Sender::slidingWindow(char* hostname){
 
 				//check to see if it was the initial message or a later one
 				if (initialrecieved == 0 && recievedack == 1 && recievedcontrol == 1){
-          cout << "Got the Initial Message" << endl;
+          //cout << "Got the Initial Message" << endl;
 					lastAck = 0;      //update the last Ack recieved
 					int first = 0;                //check to see if we are out of messages
 					initialrecieved = 1;
@@ -224,7 +224,7 @@ int Sender::slidingWindow(char* hostname){
 
 				}//END OF if (initialrecieved == 0 && recievedack == 1 && recievedcontrol == 1)
 				else if (recievedack == 1 && recievedcontrol == 0){	//if the ack was not the setup ack, add it as received
-          cout << "Recieved an ACK" << endl;
+          //cout << "Recieved an ACK" << endl;
 					tracking[recievedseq] = true;
           acked++;                            //lets us know when all packeges have been acked
           if (recievedseq - 1 == lastAck){
