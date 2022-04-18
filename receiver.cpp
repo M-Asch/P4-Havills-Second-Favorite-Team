@@ -87,10 +87,10 @@ int Receiver::initialReceive(char buffer[], char* sender_ip, char* p){
     unsigned long seq3 = buffer[2];
     unsigned long seq4 = buffer[3];
     // bit shift buffer to place chars into proper datatypes
-    unsigned long seq = ((seq1 << 24) | (seq2 << 16) | (seq3 << 8) | seq4);
+    unsigned long seq = ((ntohs(seq1) << 24) | (ntohs(seq2) << 16) | (ntohs(seq3) << 8) | ntohs(seq4));
     unsigned short ack = (buffer[4]);
     unsigned short control = (buffer[5]);
-    unsigned short length = (buffer[6] << 8 | buffer[7]);
+    unsigned short length = (ntohs(buffer[6]) << 8 | ntohs(buffer[7]));
 
     //check that values for setup messages match, if yes send acknowledgement
     if(control == 1 && ack == 0 && length == 0){
@@ -123,16 +123,16 @@ int Receiver::sendAck(unsigned long seq, char* sender_ip, char* p, int final){
 	unsigned short length = 0;
 
   // bit shifting for values into buffer
-	buffer[0] = (seq >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
-	buffer[1] = (seq >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
-	buffer[2] = (seq >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
-	buffer[3] = seq & 0xff;		//00000000 00000000 00000000 (00000000)
+	buffer[0] = (htons(seq) >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
+	buffer[1] = (htons(seq) >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
+	buffer[2] = (htons(seq) >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
+	buffer[3] = htons(seq) & 0xff;		//00000000 00000000 00000000 (00000000)
 
 	buffer[4] = ack &0xff; //(00000000) 00000001 this is the ACK
 	buffer[5] = control &0xff; //00000000 (00000001) this is the CONTROL
 
-	buffer[6] = (length >> 8) & 0xff;
-	buffer[7] = length & 0xff;
+	buffer[6] = (htons(length) >> 8) & 0xff;
+	buffer[7] = htons(length) & 0xff;
 
 
   // Setting up address information to send ACK
@@ -297,13 +297,13 @@ void Receiver::receiveMessage(int sockfd){
           unsigned long seq3 = receive[2];
           unsigned long seq4 = receive[3];
 
-          unsigned long seq = ((seq1 << 24) | (seq2 << 16) | (seq3 << 8) | seq4);
+          unsigned long seq = ((ntohs(seq1) << 24) | (ntohs(seq2) << 16) | (ntohs(seq3) << 8) | ntohs(seq4));
           //cout << "seq " << seq << endl;
           unsigned short ack = (receive[4]);
           //cout << "ack " << ack << endl;
           unsigned short control = (receive[5]);
           //cout << "control " << control << endl;
-          unsigned short length = (receive[6] << 8 | receive[7]);
+          unsigned short length = (ntohs(receive[6]) << 8 | ntohs(receive[7]));
           //cout << "len " << length << endl;
           char data[length];
           for (int i = 0; i < length; i++){
@@ -332,7 +332,7 @@ void Receiver::receiveMessage(int sockfd){
 	    }
     }
   }
-  cout << "out of loop" << endl;
+  //cout << "out of loop" << endl;
 
   //Sort packets into order
   int dataLen = 0;
