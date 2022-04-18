@@ -332,7 +332,6 @@ void Receiver::receiveMessage(int sockfd){
 	    }
     }
   }
-  cout << "out of loop" << endl;
 
   //Sort packets into order
   int dataLen = 0;
@@ -374,52 +373,4 @@ void Receiver::receiveMessage(int sockfd){
   }
   cout << endl;
 
-  //message[totalLen] = '\0';
-  //printf("\"%s\"\n", message);
-}
-
-
-//===============================================
-//               makeSocket
-//     create socket for receiving info
-//===============================================
-struct sockaddr_in makeSocket(void){
-	struct sockaddr_in server_addr;
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = htons(SERVERPORT);
-	server_addr.sin_addr.s_addr = INADDR_ANY;
-	memset(server_addr.sin_zero, 0, sizeof server_addr.sin_zero);
-
-	return server_addr;
-}
-
-//===============================================
-//               main
-//     sets up socket and calls receiveMessage
-//===============================================
-int main(int argc, char **argv){
-
-  // ESTABLISH SOCKET
-  int sockfd = socket(PF_INET, SOCK_DGRAM, 0);    // create a new UDP socket
-  if (sockfd == -1) {
-    perror("server: socket failed");
-    exit(0);
-  }
-
-  struct sockaddr_in server_addr = makeSocket();	//fill in socket ids
-  if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof server_addr) == -1){
-    close(sockfd);
-    perror("server: bind failed");
-    exit(1);
-  }
-
-	// ALL THE RECEIVING AND CHECKING IS HANDLED THROUGH THIS FUNCTION
- 	Receiver r;
-  cout << "start receiving" << endl;
-	r.receiveMessage(sockfd);
-  cout << "end receive" << endl;
-  //freeaddrinfo(server_info);
- 	close(sockfd);
-
-  return 0;
 }
