@@ -112,7 +112,7 @@ int Sender::slidingWindow(char* hostname){
 
 	char buffer[messageCount][MAXDATALENGTH + 8];
  
-  //=============================
+  	//=============================
  	//Break the message into its different parts to be sent forward
 	//=============================
 	for (int i = 0; i < (messageCount); i++){		
@@ -179,7 +179,7 @@ int Sender::slidingWindow(char* hostname){
 
 		int num_events = poll(pfds, 2, 5000);
    
-    int messageRecieved = 0;
+    		int messageRecieved = 0;
 
 		if (num_events != 0) {
 			//printf("Type message: "); //Prompts client to enter message to send to chat partner
@@ -189,13 +189,12 @@ int Sender::slidingWindow(char* hostname){
 				//Stage 3: check ack
 				char recieve[8];
 				memset(recieve, 0 , 8);
-      	int numbytes = recvfrom(sockfd, recieve, 8, 0, (struct sockaddr *)&sender_addr, &addr1_len);
-	    	if (numbytes == -1)
-	    	{
-		     		perror("recvfrom");
-		     		exit(1);
-	   		}
-        messageRecieved = 1;
+      				int numbytes = recvfrom(sockfd, recieve, 8, 0, (struct sockaddr *)&sender_addr, &addr1_len);
+	    			if (numbytes == -1){
+		     			perror("recvfrom");
+		     			exit(1);
+	   			}
+        			messageRecieved = 1;
 
 				//get the information from the ack message
 				recievedseq = ntohs((recieve[0] << 24) | (recieve[1] << 16) | (recieve[2] << 8) | recieve[3]);
@@ -205,87 +204,79 @@ int Sender::slidingWindow(char* hostname){
 
 				//check to see if it was the initial message or a later one
 				if (initialrecieved == 0 && recievedack == 1 && recievedcontrol == 1){
-          //cout << "Got the Initial Message" << endl;
 					lastAck = 0;      //update the last Ack recieved
 					int first = 0;                //check to see if we are out of messages
 					initialrecieved = 1;
 					while (first < MAXPACKETSOUT && first < messageCount){    //send the initial 5 messages to start with or, if less than MAXPACKETSOUT, as many as possible
 						int numbytes = sendto(sockfd, buffer[first], sizeof(buffer[first]), 0, ptr->ai_addr, ptr->ai_addrlen);
-            //cout << "Sent initial messages" << endl;
-						if ((numbytes) == -1)
-					 	{
+						if ((numbytes) == -1){
 					 		perror("client: sendto");
 					 		exit(1);
 					 	}
 						first++;
 						lastSent = first;      //since it is the first MAXPACKETSOUT messages, each new one will be the most recent sent
-					}
+						}
 
 				}//END OF if (initialrecieved == 0 && recievedack == 1 && recievedcontrol == 1)
-        else if (recievedack == 1 && recievedcontrol == 2){
-          acked++;
-          return 0;
-        }
+        			else if (recievedack == 1 && recievedcontrol == 2){
+          				acked++;
+          				return 0;
+        			}
 				else if (recievedack == 1 && recievedcontrol == 0){	//if the ack was not the setup ack, add it as received
-          //cout << "Recieved an ACK" << endl;
 					tracking[recievedseq] = true;
-          acked++;                            //lets us know when all packeges have been acked
-          if (recievedseq - 1 == lastAck){
-            lastAck = recievedseq;
-          }
+         				acked++;                            //lets us know when all packeges have been acked
+          				if (recievedseq - 1 == lastAck){
+            					lastAck = recievedseq;
+          				}
 				}
-		 }
+		 	}
 		}
-    //=============================
- 	  // Check to see if the initial message needs to be resent
-  	//=============================
+   		//=============================
+ 	  	// Check to see if the initial message needs to be resent
+  		//=============================
 		if (initialrecieved == 0){
 			int numbytes = sendto(sockfd, initM, sizeof(initM), 0, ptr->ai_addr, ptr->ai_addrlen);
-      //cout << "resend initial message" << endl;
-		 	if ((numbytes) == -1)
-		 	{
+		 	if ((numbytes) == -1){
 		 		perror("client: sendto");
 		 		exit(1);
 		 	}
 		}
-     //=============================
- 	  // Either the algorithm timed out or a message was recieved and we need to see if a timeout occured and resend a message or send a new message
-	  //=============================
+     	  	//=============================
+ 	  	// Either the algorithm timed out or a message was recieved and we need to see if a timeout occured and resend a message or send a new message
+	  	//=============================
 		if(acked < messageCount && messageRecieved == 1){
-      //cout << "Resending a message" << endl;
-	    for(int messageNum = lastAck; messageNum < messageNum + MAXPACKETSOUT; messageNum++){    //send the max number of messages if they need to be resent or new messages
-	      if (messageNum >= messageCount)        //if there are no more messages to send
-	        break;
-				else if(tracking[messageNum] == true){    //if the message has already been acked
-						if (recievedseq - 1 == lastAck){
-							lastAck = recievedseq;
-						}
+	    	for(int messageNum = lastAck; messageNum < messageNum + MAXPACKETSOUT; messageNum++){    //send the max number of messages if they need to be resent or new messages
+	      		if (messageNum >= messageCount)        //if there are no more messages to send
+	        		break;
+			else if(tracking[messageNum] == true){    //if the message has already been acked
+				if (recievedseq - 1 == lastAck){
+					lastAck = recievedseq;
 					}
-				else{
-		      int numbytes = sendto(sockfd, buffer[messageNum], sizeof(buffer[messageNum]), 0, ptr->ai_addr, ptr->ai_addrlen);      //send out the message
-					if ((numbytes) == -1){
-						perror("client: sendto");
-						exit(1);
-				 	}
 				}
+			else{
+		      		int numbytes = sendto(sockfd, buffer[messageNum], sizeof(buffer[messageNum]), 0, ptr->ai_addr, ptr->ai_addrlen);      //send out the message
+				if ((numbytes) == -1){
+					perror("client: sendto");
+					exit(1);
+				 }
+			}
   		}
-		}
-   //=============================
-   // We have sent all messages and need to send the final closing ack
-   //=============================
-   else if (acked >= messageCount){
-		  char finalM[8];
-      //cout << "Sending final message: Waiting for recieve" << endl;
- 			memset(finalM, 0, 8);
- 			finalMessage(finalM, seq);
- 			int numbytes = sendto(sockfd, finalM, sizeof(finalM), 0, ptr->ai_addr, ptr->ai_addrlen);//send final message
- 			if ((numbytes) == -1){
-				perror("client: sendto");
-		    exit(1);
- 			}
-    }
+	}
+   	//=============================
+   	// We have sent all messages and need to send the final closing ack
+  	//=============================
+   	else if (acked >= messageCount){
+		char finalM[8];
+ 		memset(finalM, 0, 8);
+ 		finalMessage(finalM, seq);
+ 		int numbytes = sendto(sockfd, finalM, sizeof(finalM), 0, ptr->ai_addr, ptr->ai_addrlen);//send final message
+ 		if ((numbytes) == -1){
+			perror("client: sendto");
+		    	exit(1);
+ 		}
+    	}
 	}//END OF while (acked < messageCount)
-	return 0;
+	return 0;	
 }
 
 char* Sender::initialMessage(char* initial){
