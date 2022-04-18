@@ -123,16 +123,24 @@ int Receiver::sendAck(unsigned long seq, char* sender_ip, char* p, int final){
 	unsigned short length = 0;
 
   // bit shifting for values into buffer
-	buffer[0] = (htons(seq) >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
-	buffer[1] = (htons(seq) >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
-	buffer[2] = (htons(seq) >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
-	buffer[3] = htons(seq) & 0xff;		//00000000 00000000 00000000 (00000000)
+  unsigned long temp = htons(seq);
+	// buffer[0] = (htons(seq) >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
+	// buffer[1] = (htons(seq) >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
+	// buffer[2] = (htons(seq) >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
+	// buffer[3] = htons(seq) & 0xff;		//00000000 00000000 00000000 (00000000)
+  buffer[0] = (temp >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
+	buffer[1] = (temp >> 16)& 0xff; //00000000 (00000000) 00000000 00000000
+	buffer[2] = (temp >> 8)& 0xff; //00000000 00000000 (00000000) 00000000
+	buffer[3] = temp & 0xff;		//00000000 00000000 00000000 (00000000)
 
 	buffer[4] = ack &0xff; //(00000000) 00000001 this is the ACK
 	buffer[5] = control &0xff; //00000000 (00000001) this is the CONTROL
 
-	buffer[6] = (htons(length) >> 8) & 0xff;
-	buffer[7] = htons(length) & 0xff;
+  length = htons(length);
+	// buffer[6] = (htons(length) >> 8) & 0xff;
+	// buffer[7] = htons(length) & 0xff;
+  buffer[6] = (length >> 8) & 0xff;
+	buffer[7] = length & 0xff;
 
 
   // Setting up address information to send ACK
