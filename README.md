@@ -54,3 +54,20 @@ The process then goes back to the *receiveMessage* function where a list of Rece
     }
 
 Once this data is collected, a check is made to see if the sequence number gathered had been seen before and stored in the list seen. If not, the sequence number is added to the list seen and the data for the sequence number, length, and message data is put into a Receiver object and added to the list received. In all situations where control and ACK received are both 0, the function *sendAck* is called to send an ACK back for the sequence number to the sender. If control is 2, an ACK is still sent but LISTENING is set to 0 to exit the loop. 
+
+Once the fuction had left the while loop, it enters the portion of *receiveMessage* that handles assembling and printing the message. First, the number of gathered packets from the while loop is counted into the value *dataLen*. A quick sort, using the function *quickSort* is then is then run on the collected packets to make sure the collected data is in order from lowest to highest sequence number. Afterwards, a loop collects the total of all the lengths stored in each packet stored in the data types in the *received* array. This allows for each amount of data stored in each Receiver object into one char array called *message*. This is done through the following loops:
+
+    char message[totalLen] = {};
+    int c = 0;
+    while (c < totalLen){
+        for (int i = 0; i < dataLen; i++){
+            char* temp = NULL;
+            temp = received[i].getMessage();
+            for (int j = 0; j < received[i].getLen(); j++){
+                message[c] = temp[j];
+                c++;
+            }   
+        }
+    }
+
+The function *receiveMessage* ends by iterating and using cout to put the message onto the terminal window of receiver, leaving the full message to be displayed.
