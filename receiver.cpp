@@ -347,16 +347,6 @@ void Receiver::receiveMessage(int sockfd){
 
   // Sort out out of order sequence numbers
   quickSort(received, 0, (dataLen-1));
-  // Receiver received2[MAXBUFLEN] = {};
-  // memset(received2, 0, MAXBUFLEN);
-  // int temp = 1;
-  // while (temp != dataLen){
-  //   for (int i = 0; i < dataLen; i++){
-  //     if (received[i].getSeq() == temp){
-  //       received2[temp-1] = received
-  //     }
-  //   }
-  // }
 
   // gets total length of all chars received
   int totalLen = 0;
