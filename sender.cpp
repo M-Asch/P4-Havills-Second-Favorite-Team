@@ -89,30 +89,6 @@ int Sender::slidingWindow(char* hostname){
 		exit(2);
 	}
 
- //=============================
-	//Bind sender socket
-	//=============================
-
-	/*int mysock = socket(PF_INET, SOCK_DGRAM, 0);    // create a new UDP socket
-	if (mysock == -1)
-	{
-		perror("listener: socket");
-		exit(1);
-	}
-
-	struct sockaddr_in my_addr;             // socket address to listen on
-	my_addr.sin_family = AF_INET;           // IPv4
-	my_addr.sin_port = htons(SERVERPORT);       // my port in network byte order
-	my_addr.sin_addr.s_addr = INADDR_ANY;   // bind to local IP address
-	memset(my_addr.sin_zero, 0, sizeof my_addr.sin_zero);  // zero out sin_zero
-
-	if (bind(mysock, (struct sockaddr *)&my_addr, sizeof my_addr) == -1)
-	{
-		close(sockfd);
-		perror("listener: bind");
-		exit(1);
-	}*/
-
 	//=============================
 	//send initial ack message to reciever
 	//=============================
@@ -135,16 +111,18 @@ int Sender::slidingWindow(char* hostname){
 	int starting = 0;
 
 	char buffer[messageCount][MAXDATALENGTH + 8];
-
-	for (int i = 0; i < (messageCount); i++){				//find out how much to write to the length
-		memset(buffer[i],0,MAXDATALENGTH + 8);				//make sure its 0d out
-		if (remaining_length > MAXDATALENGTH){
+ 
+  //=============================
+ 	//Break the message into its different parts to be sent forward
+	//=============================
+	for (int i = 0; i < (messageCount); i++){		
+		memset(buffer[i],0,MAXDATALENGTH + 8);				
+		if (remaining_length > MAXDATALENGTH){              //if message is longer than storage space
 			remaining_length = remaining_length - MAXDATALENGTH;
 			message_length = MAXDATALENGTH;
-			//cout << messageCount << remaining_length << message_length << endl;
 		}
 		else{
-			message_length = length;
+			message_length = remaining_length;        //if message is less than storage space
 			remaining_length = 0;
 		}
 		buffer[i][0] = (seq >> 24)& 0xff; //(00000000) 00000000 00000000 00000000
@@ -164,13 +142,7 @@ int Sender::slidingWindow(char* hostname){
 		starting = starting + message_length;
 		seq++;
 	}
-
-	cout << "hello" << endl;
-	//check message
-	/*for (int i = 0; i < 27; i++){
-		printf("%c \n", buffer[0][i]);
-	}*/
-
+ 
 	//=============================
  	//Begin listening for incoming messages for a set amount of time
 	//=============================
@@ -184,7 +156,7 @@ int Sender::slidingWindow(char* hostname){
 	int initialrecieved = 0;
 
 	//=============================
- 	//sEND initialMessage and begin polling
+ 	//Send initialMessage and begin polling
 	//=============================
 
 	int numbytes = sendto(sockfd, initM, sizeof(initM), 0, ptr->ai_addr, ptr->ai_addrlen);
@@ -193,7 +165,7 @@ int Sender::slidingWindow(char* hostname){
  		perror("client: sendto");
  		exit(1);
  	}
-	cout << "initial message sent" << endl;
+	//cout << "initial message sent" << endl;
 
 	while (acked < messageCount){
  		struct sockaddr_storage sender_addr;      // sender's address (may be IPv6)
@@ -206,6 +178,8 @@ int Sender::slidingWindow(char* hostname){
 		pfds[1].events = POLLIN;
 
 		int num_events = poll(pfds, 2, 5000);
+   
+   int messageRecieved = 0;
 
 		if (num_events != 0) {
 			//printf("Type message: "); //Prompts client to enter message to send to chat partner
@@ -221,6 +195,7 @@ int Sender::slidingWindow(char* hostname){
 		     		perror("recvfrom");
 		     		exit(1);
 	   		}
+        messageRecieved = 1;
 				//r = 1;
 
 				//get the information from the ack message
@@ -231,50 +206,60 @@ int Sender::slidingWindow(char* hostname){
 
 				//check to see if it was the initial message or a later one
 				if (initialrecieved == 0 && recievedack == 1 && recievedcontrol == 1){
+          cout << "Got the Initial Message" << endl;
 					lastAck = 0;      //update the last Ack recieved
-					int first = 0;
+					int first = 0;                //check to see if we are out of messages
 					initialrecieved = 1;
-					while (first < 5 && first < messageCount){//send the initial 5 messages to start the
+					while (first < MAXPACKETSOUT && first < messageCount){    //send the initial 5 messages to start with or, if less than MAXPACKETSOUT, as many as possible
 						int numbytes = sendto(sockfd, buffer[first], sizeof(buffer[first]), 0, ptr->ai_addr, ptr->ai_addrlen);
+            //cout << "Sent initial messages" << endl;
 						if ((numbytes) == -1)
 					 	{
 					 		perror("client: sendto");
 					 		exit(1);
 					 	}
 						first++;
-						lastSent = first;
+						lastSent = first;      //since it is the first MAXPACKETSOUT messages, each new one will be the most recent sent
 					}
 
 				}//END OF if (initialrecieved == 0 && recievedack == 1 && recievedcontrol == 1)
 				else if (recievedack == 1 && recievedcontrol == 0){	//if the ack was not the setup ack, add it as received
+          cout << "Recieved an ACK" << endl;
 					tracking[recievedseq] = true;
-          acked++;
+          acked++;                            //lets us know when all packeges have been acked
           if (recievedseq - 1 == lastAck){
             lastAck = recievedseq;
-          }// END OF if (recievedseq - 1 == lastAck)
-				}//END OF else if (recievedack == 1 && recievedcontrol == 0)
-			}//END OF if (pollin_happened1)
-		}//END OF if (num_events != 0)
-    //THIS IS TO CHECK TO SEE IF A MESSAGE NEEDS TO BE RESENT
+          }
+				}
+		 }
+		}
+    //=============================
+ 	  // Check to see if the initial message needs to be resent
+  	//=============================
 		if (initialrecieved == 0){
 			int numbytes = sendto(sockfd, initM, sizeof(initM), 0, ptr->ai_addr, ptr->ai_addrlen);
+      //cout << "resend initial message" << endl;
 		 	if ((numbytes) == -1)
 		 	{
 		 		perror("client: sendto");
 		 		exit(1);
 		 	}
 		}
-		if(acked < messageCount){
-	    for(int messageNum = lastAck; messageNum < messageNum + 5; messageNum++){
-	      if (messageNum >= messageCount)
+     //=============================
+ 	  // Either the algorithm timed out or a message was recieved and we need to see if a timeout occured and resend a message or send a new message
+	  //=============================
+		if(acked < messageCount && messageRecieved == 1){
+      //cout << "Resending a message" << endl;
+	    for(int messageNum = lastAck; messageNum < messageNum + MAXPACKETSOUT; messageNum++){    //send the max number of messages if they need to be resent or new messages
+	      if (messageNum >= messageCount)        //if there are no more messages to send
 	        break;
-				else if(tracking[messageNum] == true){
+				else if(tracking[messageNum] == true){    //if the message has already been acked
 						if (recievedseq - 1 == lastAck){
 							lastAck = recievedseq;
 						}
 					}
 				else{
-		      int numbytes = sendto(sockfd, buffer[messageNum], sizeof(buffer[messageNum]), 0, ptr->ai_addr, ptr->ai_addrlen);
+		      int numbytes = sendto(sockfd, buffer[messageNum], sizeof(buffer[messageNum]), 0, ptr->ai_addr, ptr->ai_addrlen);      //send out the message
 					if ((numbytes) == -1){
 						perror("client: sendto");
 						exit(1);
@@ -282,25 +267,38 @@ int Sender::slidingWindow(char* hostname){
 				}
   		}
 		}
-		else{
-			char finalM[8];
-			memset(finalM, 0, 8);
-			finalMessage(finalM, seq);
-			int numbytes = sendto(sockfd, finalM, sizeof(finalM), 0, ptr->ai_addr, ptr->ai_addrlen);//send final message
-			if ((numbytes) == -1){
-					perror("client: sendto");
-					exit(1);
-			}
-
-			char recieve[8];
-			memset(recieve, 0 , 8);
-			numbytes = recvfrom(sockfd, recieve, 8, 0, (struct sockaddr *)&sender_addr, &addr1_len);
-			if (numbytes == -1)
-			{
-					perror("recvfrom");
-					exit(1);
-			}//add check for control and ack
-		}
+   //=============================
+   // We have sent all messages and need to send the final closing ack
+   //=============================
+   else if (acked >= messageCount){
+		  char finalM[8];
+      //cout << "Sending final message: Waiting for recieve" << endl;
+ 			memset(finalM, 0, 8);
+ 			finalMessage(finalM, seq);
+ 			int numbytes = sendto(sockfd, finalM, sizeof(finalM), 0, ptr->ai_addr, ptr->ai_addrlen);//send final message
+ 			if ((numbytes) == -1){
+				perror("client: sendto");
+		    exit(1);
+ 			}
+      
+      char recieve[8];
+ 			memset(recieve, 0 , 8);
+      int done = 0;
+      while (done != 1){
+      numbytes = recvfrom(sockfd, recieve, 8, 0, (struct sockaddr *)&sender_addr, &addr1_len);
+ 	    if (numbytes == -1){
+       		perror("recvfrom");
+       		exit(1);
+		  }
+      recievedack = (0 << 8) | recieve[4];
+      recievedcontrol = (0 << 8) | recieve[5];
+      if (recievedack == 1 && recievedcontrol == 2){
+        //cout << "Final Message Recieved" << endl;
+        done = 1;
+        return 0;
+      }
+      }
+    }
 	}//END OF while (acked < messageCount)
 	return 0;
 }
@@ -345,21 +343,5 @@ char* Sender::finalMessage(char* final, int seq){
 
 
 int Sender::sendMessage(char* buffer, char* sender_ip, char* p, int send){
-	return 0;
-}
-
-int main (void){
-
-	int size = 20;
-	char m[20];
-	memset(m,0,20);
-	string s = "red1.cs.denison.edu";
-	for (int i =0; i < (s.length()); i++){
-		m[i] = s[i];
-	}
-	Sender msg(size, m);
-	//msg.updateSent(52);
-
-	msg.slidingWindow(m);
 	return 0;
 }
