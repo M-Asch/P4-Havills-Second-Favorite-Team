@@ -297,13 +297,15 @@ void Receiver::receiveMessage(int sockfd){
           unsigned long seq3 = receive[2];
           unsigned long seq4 = receive[3];
 
-          unsigned long seq = ((ntohs(seq1) << 24) | (ntohs(seq2) << 16) | (ntohs(seq3) << 8) | ntohs(seq4));
+          unsigned long seq = ((seq1 << 24) | (seq2 << 16) | (seq3 << 8) | seq4);
+          seq = ntohs(seq);
           //cout << "seq " << seq << endl;
           unsigned short ack = (receive[4]);
           //cout << "ack " << ack << endl;
           unsigned short control = (receive[5]);
           //cout << "control " << control << endl;
-          unsigned short length = (ntohs(receive[6]) << 8 | ntohs(receive[7]));
+          unsigned short length = ((receive[6]) << 8 | receive[7]);
+          length = ntohs(length);
           //cout << "len " << length << endl;
           char data[length];
           for (int i = 0; i < length; i++){
