@@ -165,7 +165,7 @@ int Sender::slidingWindow(char* hostname){
  		perror("client: sendto");
  		exit(1);
  	}
-	//cout << "initial message sent" << endl;
+
 
 	while (acked <= messageCount){
  		struct sockaddr_storage sender_addr;      // sender's address (may be IPv6)
@@ -241,17 +241,17 @@ int Sender::slidingWindow(char* hostname){
 		 		exit(1);
 		 	}
 		}
-     	  	//=============================
+     	//=============================
  	  	// Either the algorithm timed out or a message was recieved and we need to see if a timeout occured and resend a message or send a new message
 	  	//=============================
-		if(acked < messageCount && messageRecieved == 1){
+		if(acked < messageCount){
 	    	for(int messageNum = lastAck; messageNum < messageNum + MAXPACKETSOUT; messageNum++){    //send the max number of messages if they need to be resent or new messages
 	      		if (messageNum >= messageCount)        //if there are no more messages to send
 	        		break;
-			else if(tracking[messageNum] == true){    //if the message has already been acked
-				if (recievedseq - 2 == lastAck){
-					lastAck = recievedseq - 1;
-					}
+				else if(tracking[messageNum] == true){    //if the message has already been acked
+					if (recievedseq - 2 == lastAck){
+						lastAck = recievedseq - 1;
+						}
 				}
 			else{
 		      		int numbytes = sendto(sockfd, buffer[messageNum], sizeof(buffer[messageNum]), 0, ptr->ai_addr, ptr->ai_addrlen);      //send out the message

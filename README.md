@@ -16,6 +16,93 @@ In the first terminal run main.cpp to start the receiver program. In the second 
 
 ## **Sender**
 
+Sender works by first check the number of inputs when the main.cpp exectuable was called. If a hostname and message was included in the call, then the program knows it will be sending the message. It begins by creating a new instance of the Sender class giving it the message along with its size. The sliding window function is then called with the given hostname which will manage the packets and which ones to send or resend. 
+
+**slidingWindow(hostname)**
+
+Sliding window starts by establishing a connection to the given hostname and port. The protocol then creates a starting message which will be used to initialize the connection between the sender and reciever. A buffer is then created which breaks the data up into all of the individual parts which is required if the overall size of the data is greater than 1024. 
+
+```
+for (int i = 0; i < (messageCount); i++){		
+		memset(buffer[i],0,MAXDATALENGTH + 8);				
+		if (remaining_length > MAXDATALENGTH){             
+			remaining_length = remaining_length - MAXDATALENGTH;
+			message_length = MAXDATALENGTH;
+		}
+		else{
+			message_length = remaining_length;
+			remaining_length = 0;
+		}
+		buffer[i][0] = (htons(seq) >> 24)& 0xff;
+		buffer[i][1] = (htons(seq) >> 16)& 0xff; 
+		buffer[i][2] = (htons(seq) >> 8)& 0xff; 
+		buffer[i][3] = htons(seq) & 0xff;		
+
+		buffer[i][4] = ack &0xff;
+		buffer[i][5] = control &0xff; 
+
+		buffer[i][6] = (htons(message_length) >> 8) & 0xff;
+		buffer[i][7] = htons(message_length) & 0xff;
+
+		for (int x = 0; x < message_length; x++){
+			buffer[i][8 + x] = message[starting + x];
+		}
+		starting = starting + message_length;
+		seq++;
+	}
+```
+This process is used throughout the code to generate messages with sligh variations. *initialMessage()* and *finalMethod* both use versions of this method to create a valid char array with slightly different values and without any actual data present after the header. 
+
+Once these messages are created and sent the function then begins the managment of the messages and acknowledgments. There are a few crucial variables here. *initialrecieved* is used to track if the inital method has been acknowledged and therefor determines if we can begin sending other messages. *acked* tracks the number of acked messages and is used to determine when the program can shut down as all messages have been sent or recieved. 
+
+**Recieving**
+The *slidingWindow()* function makes use of the poll function to listen for messages without polling. It also has a timeout feature where if a message is not recieved within a designated amount of time it will end the poll and attempt to resend all messages within the sliding window range that do not have an ACK. (This range can be changed using a constant variable found in "sender.h" called *MAXPACKETSOUT*). 
+
+When a message is recieved the function makes a few checks. It first finds all of the important info such as the sequence number, control, and acknowledgment. 
+
+```
+recievedseq = ntohs((recieve[0] << 24) | (recieve[1] << 16) | (recieve[2] << 8) | recieve[3]);
+recievedack = (0 << 8) | recieve[4];
+recievedcontrol = (0 << 8) | recieve[5];
+```
+
+It then checks to see if this is the acknowledgement of the inital message. If it is, the function will then send out as many packets as it can, only limited by either the number of packets in the message or the total number of packets allowed out. It will also update last sent with each new packet it sends in this case as we know this is the first time any of the packets will be sent. 
+
+There are then two more checks which check to see if the message is either the teardown message, in which case it will return and end the function. It will also check to see if this is any other ack rather than the inital or final message. In this case, it takes the sequence number and sets it equal to true in a tracking array. 
+
+**Resending Messages** 
+
+When the *poll()* function ends the code checks to see if it needs to resend a message or if a new message can be sent. 
+
+```
+else if(tracking[messageNum] == true){
+	if (recievedseq - 2 == lastAck){
+	lastAck = recievedseq - 1;
+	}
+}
+```
+This checks to see if the lastAck recieved can be updated to allow for a new message to be sent while an else statement will resend the message if it did not recieve an ack for a packet within the given range. 
+
+**Closing**
+Finally, once the code has sent all of the messages packets a if statement will be called which continues to send a closing message until an ack is recieved. 
+
+```
+else if (acked >= messageCount){
+		char finalM[8];
+ 		memset(finalM, 0, 8);
+ 		finalMessage(finalM, seq);
+ 		int numbytes = sendto(sockfd, finalM, sizeof(finalM), 0, ptr->ai_addr, ptr->ai_addrlen);
+ 		if ((numbytes) == -1){
+			perror("client: sendto");
+		    	exit(1);
+ 		}
+    	}
+	}
+```
+
+Once the final ack is recieved the program closes and returns.
+
+
 ## **Receiver**
 Once called, the receiver process begins within main.cpp. In main.cpp, the receiver sets up and binds a socket to handle receiving messages from the sender. Following that, main.cpp calls upon the Receiver class and calls the function *recieveMessage*. At this point, the rest of the process is handled within receiver.cpp and the Receiver class. After *recieveMessage*, main.cpp closes the socket and ends the receive process. 
 
