@@ -22,7 +22,10 @@ Receiver::Receiver(){
 Receiver::Receiver(int s, int l, char* c){
   seqnum = s;
   len = l;
-  message = c;
+  message = new char[1024];
+  for (int i = 0; i < l; i++){
+    message[i] = c[i];
+  }
 }
 
 //==========================================
@@ -176,9 +179,7 @@ int Receiver::sendAck(unsigned long seq, char* sender_ip, char* p, int final){
 //====================================================
 void Receiver::quickSort(Receiver arr[], int low, int high){
   if (low < high){
-    cout << "part" << endl;
-    int p = partition(arr, low, p-1);
-    cout << "after part" << endl;
+    int p = partition(arr, low, high);
     quickSort(arr, low, p-1);
     quickSort(arr, p+1, high);
   }
@@ -297,7 +298,7 @@ void Receiver::receiveMessage(int sockfd){
           unsigned long seq4 = receive[3];
 
           unsigned long seq = ((seq1 << 24) | (seq2 << 16) | (seq3 << 8) | seq4);
-          cout << "seq " << seq << endl;
+          //cout << "seq " << seq << endl;
           unsigned short ack = (receive[4]);
           //cout << "ack " << ack << endl;
           unsigned short control = (receive[5]);
@@ -307,16 +308,13 @@ void Receiver::receiveMessage(int sockfd){
           char data[length];
           for (int i = 0; i < length; i++){
              data[i] = receive[i + 8];
+             //cout << data[i] << endl;
           }
-          // for (int i = 0; i < length; i++){
-          //   cout << data[i] << endl;
-          // }
-          //cout << "{{{{{{{{{{{{{{{{{{}}}}}}}}}}}}}}}}}}" << endl;
 
           // checks to see if seqnum had been seen yet, if not adds to lists to store data and keep track of what has been seen
           bool temp = (std::find(std::begin(seen), std::end(seen), seq) != std::end(seen));
           if (temp == false && control != 2){
-             cout << "seen " << seq << endl;
+             //cout << "seen " << seq << endl;
              seen[count] = seq;
              Receiver add(seq, length, data);
              received[count] = add;
@@ -349,6 +347,16 @@ void Receiver::receiveMessage(int sockfd){
 
   // Sort out out of order sequence numbers
   quickSort(received, 0, (dataLen-1));
+  // Receiver received2[MAXBUFLEN] = {};
+  // memset(received2, 0, MAXBUFLEN);
+  // int temp = 1;
+  // while (temp != dataLen){
+  //   for (int i = 0; i < dataLen; i++){
+  //     if (received[i].getSeq() == temp){
+  //       received2[temp-1] = received
+  //     }
+  //   }
+  // }
 
   // gets total length of all chars received
   int totalLen = 0;
@@ -364,16 +372,20 @@ void Receiver::receiveMessage(int sockfd){
       char* temp = NULL;
       temp = received[i].getMessage();
       for (int j = 0; j < received[i].getLen(); j++){
-        message[c] = temp[i];
+        message[c] = temp[j];
         c++;
       }
     }
   }
 
-  // returns message in receiver terminal
+  //returns message in receiver terminal
   for (int i = 0; i < totalLen; i++){
-    cout << message[i] << endl;
+    cout << message[i];
   }
+  cout << endl;
+
+  //message[totalLen] = '\0';
+  //printf("\"%s\"\n", message);
 }
 
 
